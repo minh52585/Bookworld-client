@@ -1,12 +1,22 @@
-import { Routes, Route } from "react-router-dom";
-import HomePage from "./page/Homepage";
+import { useEffect } from 'react'
+import { useCountStore } from './stores/common.store';
+import { RouterProvider } from 'react-router-dom';
+import { router } from './routes';
+// import './App.css'
 
 function App() {
+  const { count: countFromStore } = useCountStore();
+
+
+  useEffect(() => {
+
+  }, [])
+
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-    </Routes>
-  );
+    <>
+      <RouterProvider router={router} />
+    </>
+  )
 }
 
-export default App;
+export default App
