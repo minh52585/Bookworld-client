@@ -1,7 +1,7 @@
-import React from 'react'
+import Product from '../components/common/product';
 
-export default function HomePage() {
-  return (
-    <div>HomePage</div>
-  )
-}
+const HomePage = () => {
+    return <Product />;
+};
+
+export default HomePage;
