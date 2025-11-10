@@ -60,7 +60,7 @@ const Footer = () => {
                         you can contact us or <br />
                         we will do it for you.
                     </p>
-                    <button className="border border-white text-black py-3 px-6 text-lg hover:bg-white hover:text-purple-400 transition rounded">
+                    <button className="border border-white text-white py-3 px-6 text-lg hover:bg-white hover:text-purple-400 transition-all duration-300 rounded bg-transparent">
                         Request a call
                     </button>
                     <div className="flex space-x-4 mt-4">
