@@ -1,7 +1,5 @@
 import React, { useState, useMemo } from 'react';
 
-
-
 function Thanhtoan() {
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
@@ -168,7 +166,43 @@ function Thanhtoan() {
                   />
                 </div>
 
-                {/* Submit Button */}
+                {/* pttt */}
+                <div>
+                  <h3 className="text-lg font-bold text-purple-600 mb-4">
+                    Phương Thức Thanh Toán
+                  </h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-500 transition">
+                      <input
+                        type="radio"
+                        name="payment"
+                        value="cod"
+                        checked={paymentMethod === 'cod'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-5 h-5 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="text-gray-700 font-medium">
+                        Thanh toán khi nhận hàng
+                      </span>
+                    </label>
+                    
+                    <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-500 transition">
+                      <input
+                        type="radio"
+                        name="payment"
+                        value="bank"
+                        checked={paymentMethod === 'bank'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-5 h-5 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="text-gray-700 font-medium">
+                        Chuyển khoản ngân hàng
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/*button */}
                 <button
                   onClick={handleSubmit}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-lg hover:from-purple-700 hover:to-pink-700 transform hover:scale-[1.02] transition shadow-lg"
@@ -179,10 +213,67 @@ function Thanhtoan() {
             </div>
           </div>
 
-     
-             
-         
-            
+          {/*ttdh */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
+              <h2 className="text-2xl font-bold text-purple-600 mb-6">
+                Thông tin đặt hàng
+              </h2>
+
+              {/* cart item */}
+              <div className="space-y-4 mb-6">
+                {cartItems.map(item => (
+                  <div key={item.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-16 h-16 object-cover rounded-lg"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800 text-sm mb-1">
+                        {item.name}
+                      </h4>
+                      <div className="flex items-center gap-2 mb-1">
+                        <button
+                          onClick={() => handleQuantityChange(item.id, -1)}
+                          className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 transition"
+                        >
+                          -
+                        </button>
+                        <span className="text-sm font-medium">x{item.quantity}</span>
+                        <button
+                          onClick={() => handleQuantityChange(item.id, 1)}
+                          className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 transition"
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="ml-auto text-red-500 hover:text-red-700 transition"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
+                      <p className="text-purple-600 font-bold text-sm">
+                        {formatPrice(item.price * item.quantity)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* pvc */}
+              <div className="border-t border-gray-200 pt-4 space-y-3">
+                <div className="flex justify-between text-gray-600">
+                  <span>Phí vận chuyển</span>
+                  <span className="font-semibold">{formatPrice(shippingFee)}</span>
+                </div>
+                
+                <div className="flex justify-between text-xl font-bold text-purple-600 pt-3 border-t border-gray-200">
+                  <span>Tổng thanh toán</span>
+                  <span>{formatPrice(total)}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -192,3 +283,4 @@ function Thanhtoan() {
 }
 
 export default Thanhtoan;
+
