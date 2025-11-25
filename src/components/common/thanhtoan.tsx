@@ -1,3 +1,6 @@
+
+import axios from "axios";
+import { Trash , ShoppingCart } from "lucide-react";
 import React, { useState, useMemo } from 'react';
 
 function Thanhtoan() {
@@ -43,6 +46,69 @@ function Thanhtoan() {
     }));
   };
 
+ 
+ 
+ const handleSubmit = async () => {
+   // 1️⃣ Kiểm tra thông tin bắt buộc
+   if (!formData.fullName || !formData.phone || !formData.address) {
+     alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
+     return;
+   }
+ 
+   // 2️⃣ Lấy token từ localStorage
+   const token = localStorage.getItem("token");
+   if (!token) {
+     alert("Bạn chưa đăng nhập! Vui lòng đăng nhập để đặt hàng.");
+     return;
+   }
+   console.log("Token gửi đi:", token);
+ 
+   // 3️⃣ Chuẩn bị dữ liệu order
+   const orderData = {
+     ...formData,
+     items: cartItems.map(item => ({
+       product_id: item.id,
+       name: item.name,
+       price: item.price,
+       quantity: item.quantity
+     })),
+     paymentMethod,
+     subtotal,
+     shippingFee,
+     total
+   };
+ 
+   // 4️⃣ Gửi API
+   try {
+     const res = await axios.post(
+       "http://localhost:5004/api/orders",
+       orderData,
+       {
+         headers: {
+           Authorization: `Bearer ${token}`
+         }
+       }
+     );
+ 
+     console.log("Order response:", res.data);
+     alert("Đặt hàng thành công!");
+   } catch (error: any) {
+     
+     if (axios.isAxiosError(error)) {
+       console.error("Axios error response:", error.response?.data);
+       alert(
+         `Đặt hàng thất bại! Lỗi: ${error.response?.data?.message || error.message}`
+       );
+     } else {
+       console.error("Unknown error:", error);
+       alert("Đặt hàng thất bại! Vui lòng thử lại.");
+     }
+   }
+ };
+ 
+
+
+ 
   const handleQuantityChange = (id: number, delta: number) => {
     setCartItems(prev => prev.map(item => {
       if (item.id === id) {
@@ -57,41 +123,9 @@ function Thanhtoan() {
     setCartItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleSubmit = () => {
-    if (!formData.fullName || !formData.phone || !formData.address) {
-      alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
-      return;
-    }
-
-    const orderData = {
-      ...formData,
-      items: cartItems,
-      paymentMethod,
-      subtotal,
-      shippingFee,
-      total
-    };
-
-    console.log('Đặt hàng:', orderData);
-    alert('Đặt hàng thành công!');
-  };
-
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
   };
-
-  // icon
-  const ShoppingCartIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-    </svg>
-  );
-
-  const TrashIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-    </svg>
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-8 px-4">
@@ -101,7 +135,7 @@ function Thanhtoan() {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
               <h2 className="text-2xl font-bold text-purple-600 mb-6 flex items-center gap-2">
-                <ShoppingCartIcon />
+                <ShoppingCart />
                 Thông Tin Giao Hàng
               </h2>
 
@@ -251,7 +285,7 @@ function Thanhtoan() {
                           onClick={() => handleRemoveItem(item.id)}
                           className="ml-auto text-red-500 hover:text-red-700 transition"
                         >
-                          <TrashIcon />
+                          <Trash />
                         </button>
                       </div>
                       <p className="text-purple-600 font-bold text-sm">
@@ -283,4 +317,3 @@ function Thanhtoan() {
 }
 
 export default Thanhtoan;
-
