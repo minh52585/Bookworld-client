@@ -3,6 +3,21 @@ import axios from "axios";
 import { Trash , ShoppingCart } from "lucide-react";
 import React, { useState, useMemo } from 'react';
 
+interface FormData {
+  fullName: string;
+  phone: string;
+  address: string;
+  note: string;
+}
+
+interface CartItem {
+  id: number;      
+  name: string;
+  image: string;
+  quantity: number;
+  price: number;
+}
+
 function Thanhtoan() {
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
@@ -49,13 +64,13 @@ function Thanhtoan() {
  
  
  const handleSubmit = async () => {
-   // 1️⃣ Kiểm tra thông tin bắt buộc
+   //Kiểm tra thông tin bắt buộc
    if (!formData.fullName || !formData.phone || !formData.address) {
      alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
      return;
    }
  
-   // 2️⃣ Lấy token từ localStorage
+   // Lấy token từ localStorage
    const token = localStorage.getItem("token");
    if (!token) {
      alert("Bạn chưa đăng nhập! Vui lòng đăng nhập để đặt hàng.");
@@ -63,7 +78,7 @@ function Thanhtoan() {
    }
    console.log("Token gửi đi:", token);
  
-   // 3️⃣ Chuẩn bị dữ liệu order
+   // Chuẩn bị dữ liệu order
    const orderData = {
      ...formData,
      items: cartItems.map(item => ({
@@ -78,7 +93,7 @@ function Thanhtoan() {
      total
    };
  
-   // 4️⃣ Gửi API
+   // Gửi API
    try {
      const res = await axios.post(
        "http://localhost:5004/api/orders",

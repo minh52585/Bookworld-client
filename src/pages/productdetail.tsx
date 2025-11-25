@@ -28,7 +28,7 @@ const BookDetailPage: React.FC = () => {
     const fetchProduct = async () => {
       try {
         const res = await axios.get(`http://localhost:5004/api/products/${id}`);
-        setProduct(res.data.data); // BE của bạn trả về { data: {...} }
+        setProduct(res.data.data); 
       } catch (error) {
         setError("Không tìm thấy sản phẩm!");
       } finally {
@@ -133,8 +133,6 @@ const BookDetailPage: React.FC = () => {
         </div>
       </div>
 
-
-
       {/* Collection Section */}
       <div className="container mx-auto px-4 py-8">
         <h2 className="text-2xl font-bold mb-6">Bộ sưu tập</h2>
@@ -165,7 +163,6 @@ const BookDetailPage: React.FC = () => {
                 </button>
               </div>
             </div>
-
             <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition">
               <img
                 src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300"
@@ -209,7 +206,6 @@ const BookDetailPage: React.FC = () => {
                 </button>
               </div>
             </div>
-
             <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition">
               <img
                 src="https://images.unsplash.com/photo-1519682337058-a94d519337bc?w=300"
@@ -243,7 +239,6 @@ const BookDetailPage: React.FC = () => {
           <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
         </div>
       </div>
-
       {/* Last Viewed Section */}
       <div className="container mx-auto px-4 py-8">
         <h2 className="text-2xl font-bold mb-6">Lượt xem gần đây</h2>
@@ -268,7 +263,6 @@ const BookDetailPage: React.FC = () => {
               </button>
             </div>
           </div>
-
           <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition">
             <img
               src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300"
@@ -289,7 +283,6 @@ const BookDetailPage: React.FC = () => {
               </button>
             </div>
           </div>
-
           <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition">
             <img
               src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=300"
@@ -310,7 +303,6 @@ const BookDetailPage: React.FC = () => {
               </button>
             </div>
           </div>
-
           <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition">
             <img
               src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300"
@@ -340,8 +332,6 @@ const BookDetailPage: React.FC = () => {
           <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
         </div>
       </div>
-
-   
     </div>
   );
 };
