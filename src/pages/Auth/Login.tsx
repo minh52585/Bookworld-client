@@ -1,8 +1,44 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios, { AxiosResponse } from 'axios';
+
+interface LoginResponse {
+  token: string;
+  user?: any;
+  message?: string;
+}
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleLogin = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await axios.post('http://localhost:5004/api/auth/login', {
+        email,
+        password
+      });
+
+      // Lưu token vào localStorage
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        alert('Đăng nhập thành công!');
+        navigate('/'); // Chuyển về trang chủ
+      }
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || 'Đăng nhập thất bại!';
+      setError(errorMsg);
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-12 px-4">
@@ -39,6 +75,13 @@ const LoginPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">Đăng nhập với Email</h2>
           
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-5">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -87,8 +130,12 @@ const LoginPage: React.FC = () => {
             </div>
 
             {/* Submit Button */}
-            <button className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 font-semibold transition shadow-lg">
-              Đăng Nhập
+            <button 
+              onClick={handleLogin}
+              disabled={loading}
+              className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 font-semibold transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Đang đăng nhập...' : 'Đăng Nhập'}
             </button>
 
             {/* Register Link */}
