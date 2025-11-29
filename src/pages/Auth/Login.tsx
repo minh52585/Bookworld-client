@@ -81,7 +81,7 @@ const LoginPage: React.FC = () => {
                 />
                 <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
               </label>
-              <a href="#" className="text-sm text-purple-600 hover:text-purple-700 underline">
+              <a href="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 underline">
                 Quên mật khẩu?
               </a>
             </div>
