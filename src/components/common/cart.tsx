@@ -32,9 +32,9 @@ function Cart() {
     },
     {
       id: 3,
-      title: "Another Book 2",
+      title: "Book 3",
       description: "A mysterious story unfolds.",
-      price: 18000,
+      price: 70000,
       quantity: 2,
       image:
         "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=100&h=100&fit=crop",

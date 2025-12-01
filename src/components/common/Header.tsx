@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Header = () => {
   const [openUserMenu, setOpenUserMenu] = useState(false);
@@ -26,31 +27,26 @@ const Header = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+        const API_BASE_URL =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5004/api";
+        const res = await axios.get(`${API_BASE_URL}/categories`);
 
-        const res = await fetch(`${API_BASE_URL}/category`);
-        const data = await res.json();
+        const items = res.data?.data?.items || [];
 
-        let items: any[] = [];
-
-        if (Array.isArray(data)) items = data;
-        else if (data.data?.items) items = data.data.items;
-        else if (data.items) items = data.items;
-
-        // fallback nếu API không trả về gì
-        if (!items || items.length === 0) {
-          items = [
+        // fallback nếu API trả về rỗng
+        if (items.length === 0) {
+          setCategories([
             { _id: "1", name: "Tiểu thuyết" },
             { _id: "2", name: "Trinh thám" },
             { _id: "3", name: "Hài hước" },
             { _id: "4", name: "Hoạt hình" },
             { _id: "5", name: "Cuộc sống" },
-          ];
+          ]);
+        } else {
+          setCategories(items);
         }
-
-        setCategories(items);
       } catch (err) {
-        console.log("API lỗi — fallback sang danh mục local.");
+        console.error("API lỗi — fallback sang danh mục local.", err);
 
         setCategories([
           { _id: "1", name: "Tiểu thuyết" },
@@ -76,7 +72,6 @@ const Header = () => {
   /* ====================== JSX ====================== */
   return (
     <div className="text-sm font-sans">
-
       {/* ================= TOP HEADER ================= */}
       <div className="flex items-center justify-between px-6 py-2 border-b bg-white">
         <div className="flex items-center space-x-3">
@@ -91,8 +86,8 @@ const Header = () => {
           <input
             type="text"
             placeholder="Tìm kiếm sách..."
-            className="rounded-md text-sm w-full outline-none focus:ring-2 
-              focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
+            className="rounded-md text-sm w-full outline-none focus:ring-2
+focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
           />
           <button
             type="submit"
@@ -106,17 +101,30 @@ const Header = () => {
 
         {/* RIGHT MENU */}
         <div className="flex items-center space-x-6 text-gray-600 relative">
+          <a href="#" className="hover:text-purple-600">
+            Privacy policy
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Warranty
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Shipping
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Returns
+          </a>
 
-          <a href="#" className="hover:text-purple-600">Privacy policy</a>
-          <a href="#" className="hover:text-purple-600">Warranty</a>
-          <a href="#" className="hover:text-purple-600">Shipping</a>
-          <a href="#" className="hover:text-purple-600">Returns</a>
-
-          <Link to="/cart" className="hover:text-purple-700 text-purple-600 text-xl transition">
+          <Link
+            to="/cart"
+            className="hover:text-purple-700 text-purple-600 text-xl transition"
+          >
             <i className="fas fa-shopping-cart"></i>
           </Link>
 
-          <a href="#" className="hover:text-purple-700 text-purple-600 text-xl transition">
+          <a
+            href="#"
+            className="hover:text-purple-700 text-purple-600 text-xl transition"
+          >
             <i className="fas fa-heart"></i>
           </a>
 
@@ -133,8 +141,13 @@ const Header = () => {
               <div className="absolute top-full right-0 mt-2 w-48 bg-white border rounded shadow-md z-50">
                 {user ? (
                   <>
-                    <div className="px-4 py-2 font-semibold">Xin chào, {user.fullname || user.email}</div>
-                    <Link to="/order" className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700">
+                    <div className="px-4 py-2 font-semibold">
+                      Xin chào, {user.fullname || user.email}
+                    </div>
+                    <Link
+                      to="/order"
+                      className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
+                    >
                       Đơn hàng của tôi
                     </Link>
 
@@ -147,11 +160,17 @@ const Header = () => {
                   </>
                 ) : (
                   <>
-                    <Link to="/login" className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700">
+                    <Link
+                      to="/login"
+                      className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
+                    >
                       Đăng nhập
                     </Link>
-                    <Link to="/register" className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700">
-                      Đăng ký
+                    <Link
+                      to="/register"
+                      className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
+                    >
+Đăng ký
                     </Link>
                   </>
                 )}
@@ -163,13 +182,12 @@ const Header = () => {
 
       {/* ================= BOTTOM MENU ================= */}
       <div className="flex items-center justify-between px-6 py-3 border-b-2 border-purple-200 bg-white">
-
         <div className="flex items-center space-x-6 text-gray-700">
-
           {/* ================= MUST READ HOVER DROPDOWN ================= */}
           <div className="relative group select-none">
-
-            <span className="hover:text-purple-600 cursor-pointer">The must read</span>
+            <span className="hover:text-purple-600 cursor-pointer">
+              The must read
+            </span>
 
             <div
               className="
@@ -179,28 +197,48 @@ const Header = () => {
                 transition-all duration-200
               "
             >
-              <div className="flex flex-col space-y-2">
-                {categories.map((cate) => (
-                  <div
-                    key={cate._id}
-                    className="px-2 py-2 rounded hover:bg-purple-600 hover:text-yellow-300 transition"
-                  >
-                    {cate.name}
-                  </div>
-                ))}
+              <div className="flex flex-col space-y-1">
+                {categories.length > 0 ? (
+                  categories.map((cate) => (
+                    <Link
+                      key={cate._id}
+                      to={`/category/${cate._id}`}
+                      className="block px-3 py-2 rounded text-sm 
+                  hover:bg-purple-600 hover:text-yellow-300 
+                  transition-all"
+                    >
+                      {cate.name}
+                    </Link>
+                  ))
+                ) : (
+                  <span className="text-gray-300 text-sm px-2 py-2">
+                    Không có danh mục
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          <a href="#" className="hover:text-purple-600">News</a>
-          <a href="#" className="hover:text-purple-600">Promotion of the month</a>
-          <a href="#" className="hover:text-purple-600">Publishs</a>
-          <a href="#" className="hover:text-purple-600">Subscribe to the newsletter</a>
+          <a href="#" className="hover:text-purple-600">
+            News
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Promotion of the month
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Publishs
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Subscribe to the newsletter
+          </a>
         </div>
 
         <div className="flex items-center space-x-4">
           <span className="text-purple-600">
-            <i className="fas fa-phone-alt mr-1" style={{ transform: "scaleX(-1)" }}></i>{" "}
+            <i
+              className="fas fa-phone-alt mr-1"
+              style={{ transform: "scaleX(-1)" }}
+            ></i>{" "}
             +445 87 999 000
           </span>
 
