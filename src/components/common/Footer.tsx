@@ -2,7 +2,7 @@ const Footer = () => {
     return (
         <footer className="bg-purple-400 text-white py-8 px-16">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-                {/* Logo and Social */}
+                {/* Logo và Mạng xã hội */}
                 <div className="flex flex-col justify-between">
                     <div className="font-bold text-xl">B-World</div>
                     <div className="flex space-x-4 mt-4">
@@ -12,56 +12,56 @@ const Footer = () => {
                     </div>
                 </div>
 
-                {/* Categories, For Kids, E-Books, Help & Contacts */}
+                {/* Danh mục, Trẻ em, E-Books, Hỗ trợ & Liên hệ */}
                 <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-4 gap-8">
-                    {/* Categories */}
+                    {/* Danh mục */}
                     <div>
-                        <h3 className="font-bold mb-4">Categories</h3>
+                        <h3 className="font-bold mb-4">Danh mục</h3>
                         <ul className="space-y-2">
-                            <li><a className="text-white" href="#">Psychology</a></li>
-                            <li><a className="text-white" href="#">Self-Help</a></li>
-                            <li><a className="text-white" href="#">Romance</a></li>
-                            <li><a className="text-white" href="#">Mystery</a></li>
+                            <li><a className="text-white" href="#">Tâm lý</a></li>
+                            <li><a className="text-white" href="#">Tự lực</a></li>
+                            <li><a className="text-white" href="#">Lãng mạn</a></li>
+                            <li><a className="text-white" href="#">Trinh thám</a></li>
                         </ul>
                     </div>
-                    {/* For Kids */}
+                    {/* Trẻ em */}
                     <div>
-                        <h3 className="font-bold mb-4">For kids</h3>
+                        <h3 className="font-bold mb-4">Dành cho trẻ em</h3>
                         <ul className="space-y-2">
-                            <li><a className="text-white" href="#">Games</a></li>
-                            <li><a className="text-white" href="#">Comics</a></li>
-                            <li><a className="text-white" href="#">Fantasy</a></li>
+                            <li><a className="text-white" href="#">Trò chơi</a></li>
+                            <li><a className="text-white" href="#">Truyện tranh</a></li>
+                            <li><a className="text-white" href="#">Phiêu lưu & Thần thoại</a></li>
                         </ul>
                     </div>
                     {/* E-Books */}
                     <div>
-                        <h3 className="font-bold mb-4">E-Books</h3>
-                        <ul className=" text-white space-y-2">
-                            <li><a className="text-white" href="#">Fiction</a></li>
-                            <li><a className="text-white" href="#">Historical</a></li>
-                            <li><a className="text-white" href="#">Horror</a></li>
+                        <h3 className="font-bold mb-4">Sách điện tử</h3>
+                        <ul className="text-white space-y-2">
+                            <li><a className="text-white" href="#">Tiểu thuyết</a></li>
+                            <li><a className="text-white" href="#">Lịch sử</a></li>
+                            <li><a className="text-white" href="#">Kinh dị</a></li>
                         </ul>
                     </div>
-                    {/* Help & Contacts */}
+                    {/* Hỗ trợ & Liên hệ */}
                     <div>
-                        <h3 className="font-bold mb-4">Help & Contacts</h3>
+                        <h3 className="font-bold mb-4">Hỗ trợ & Liên hệ</h3>
                         <ul className="space-y-2 text-sm">
-                            <li><i className="text-white fas fa-phone mr-2"></i> +445 87 999 000</li>
-                            <li><i className="text-white fas fa-clock mr-2"></i> Mo-Fri, 9 AM to 11 PM</li>
+                            <li><i className="text-white fas fa-phone mr-2"></i> +84 445 87 999 000</li>
+                            <li><i className="text-white fas fa-clock mr-2"></i> Thứ 2 - Thứ 6, 9 AM đến 11 PM</li>
                             <li><i className="text-white fas fa-envelope mr-2"></i> b.world@store.ro</li>
                         </ul>
                     </div>
                 </div>
 
-                {/* Contact & Payment */}
+                {/* Liên hệ & Thanh toán */}
                 <div className="flex flex-col gap-8">
                     <p className="text-white text-lg mb-4">
-                        If you have questions, <br />
-                        you can contact us or <br />
-                        we will do it for you.
+                        Nếu bạn có thắc mắc, <br />
+                        có thể liên hệ với chúng tôi hoặc <br />
+                        chúng tôi sẽ giúp bạn.
                     </p>
                     <button className="border border-white text-white py-3 px-6 text-lg hover:bg-white hover:text-purple-400 transition-all duration-300 rounded bg-transparent">
-                        Request a call
+                        Liên hệ đến chúng tôi
                     </button>
                     <div className="flex space-x-4 mt-4">
                         <img src="https://www.paypalobjects.com/webstatic/icon/pp258.png" alt="PayPal" className="h-8" />
@@ -73,11 +73,10 @@ const Footer = () => {
 
             <div className="flex justify-center items-center mt-8 border-t border-white pt-4">
                 <div className="text-sm text-center w-full">
-                    © All copyrights are reserved. B-World 2022.
+                    © All copyrights are reserved. B-World 2025.
                 </div>
             </div>
         </footer>
-
     );
 };
 

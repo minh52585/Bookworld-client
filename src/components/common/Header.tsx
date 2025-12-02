@@ -10,7 +10,6 @@ const Header = () => {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
 
-  /* ====================== LOAD USER ====================== */
   useEffect(() => {
     const loadUser = () => {
       const storedUser = localStorage.getItem("user");
@@ -23,7 +22,6 @@ const Header = () => {
     return () => window.removeEventListener("userLogin", loadUser);
   }, []);
 
-  /* ====================== LOAD CATEGORY FROM API ====================== */
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -33,7 +31,6 @@ const Header = () => {
 
         const items = res.data?.data?.items || [];
 
-        // fallback nếu API trả về rỗng
         if (items.length === 0) {
           setCategories([
             { _id: "1", name: "Tiểu thuyết" },
@@ -47,7 +44,6 @@ const Header = () => {
         }
       } catch (err) {
         console.error("API lỗi — fallback sang danh mục local.", err);
-
         setCategories([
           { _id: "1", name: "Tiểu thuyết" },
           { _id: "2", name: "Trinh thám" },
@@ -61,7 +57,6 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-  /* ====================== LOGOUT ====================== */
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
@@ -69,19 +64,18 @@ const Header = () => {
     nav("/login");
   };
 
-  /* ====================== JSX ====================== */
   return (
     <div className="text-sm font-sans">
-      {/* ================= TOP HEADER ================= */}
+      {/* ================= HEADER TRÊN ================= */}
       <div className="flex items-center justify-between px-6 py-2 border-b bg-white">
         <div className="flex items-center space-x-3">
           <Link to="/" className="font-bold text-lg text-gray-800">
             B-<span className="text-purple-600">World</span>
           </Link>
-          <span className="text-gray-400">We love books</span>
+          <span className="text-gray-400">Chúng tôi yêu sách</span>
         </div>
 
-        {/* SEARCH */}
+        {/* TÌM KIẾM */}
         <form className="relative w-64" onSubmit={(e) => e.preventDefault()}>
           <input
             type="text"
@@ -99,19 +93,19 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
           </button>
         </form>
 
-        {/* RIGHT MENU */}
+        {/* MENU PHẢI */}
         <div className="flex items-center space-x-6 text-gray-600 relative">
           <a href="#" className="hover:text-purple-600">
-            Privacy policy
+            Chính sách bảo mật
           </a>
           <a href="#" className="hover:text-purple-600">
-            Warranty
+            Bảo hành
           </a>
           <a href="#" className="hover:text-purple-600">
-            Shipping
+            Vận chuyển
           </a>
           <a href="#" className="hover:text-purple-600">
-            Returns
+            Trả hàng
           </a>
 
           <Link
@@ -128,7 +122,7 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
             <i className="fas fa-heart"></i>
           </a>
 
-          {/* USER DROPDOWN */}
+          {/* MENU NGƯỜI DÙNG */}
           <div className="relative" ref={userMenuRef}>
             <div
               onClick={() => setOpenUserMenu((prev) => !prev)}
@@ -170,7 +164,7 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
                       to="/register"
                       className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
                     >
-Đăng ký
+                      Đăng ký
                     </Link>
                   </>
                 )}
@@ -180,13 +174,13 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
         </div>
       </div>
 
-      {/* ================= BOTTOM MENU ================= */}
+      {/* ================= MENU DƯỚI ================= */}
       <div className="flex items-center justify-between px-6 py-3 border-b-2 border-purple-200 bg-white">
         <div className="flex items-center space-x-6 text-gray-700">
-          {/* ================= MUST READ HOVER DROPDOWN ================= */}
+          {/* DANH MỤC SÁCH */}
           <div className="relative group select-none">
             <span className="hover:text-purple-600 cursor-pointer">
-              The must read
+              Sách nên đọc
             </span>
 
             <div
@@ -220,16 +214,16 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
           </div>
 
           <a href="#" className="hover:text-purple-600">
-            News
+            Tin tức
           </a>
           <a href="#" className="hover:text-purple-600">
-            Promotion of the month
+            Khuyến mãi tháng
           </a>
           <a href="#" className="hover:text-purple-600">
-            Publishs
+            Nhà xuất bản
           </a>
           <a href="#" className="hover:text-purple-600">
-            Subscribe to the newsletter
+            Đăng ký nhận tin
           </a>
         </div>
 
@@ -239,11 +233,11 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
               className="fas fa-phone-alt mr-1"
               style={{ transform: "scaleX(-1)" }}
             ></i>{" "}
-            +445 87 999 000
+            +84 445 87 999 000
           </span>
 
           <button className="border border-purple-600 text-purple-600 px-4 py-1 rounded hover:bg-purple-600 hover:text-white transition">
-            Request a call
+            Yêu cầu gọi lại
           </button>
         </div>
       </div>
