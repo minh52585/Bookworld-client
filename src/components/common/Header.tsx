@@ -196,7 +196,7 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
                   categories.map((cate) => (
                     <Link
                       key={cate._id}
-                      to={`/category/${cate._id}`}
+                      to={`/categories/${cate._id}`}
                       className="block px-3 py-2 rounded text-sm 
                   hover:bg-purple-600 hover:text-yellow-300 
                   transition-all"
