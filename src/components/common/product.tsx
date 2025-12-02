@@ -180,7 +180,39 @@ const BookCarousel: React.FC = () => {
                     ))}
                 </div>
             </section>
-            <section> <h2 className="text-2xl font-bold mb-6 text-left">Có thể mua ngay</h2> <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"> {mustBuyBooks.map((book, index) => ( <BookCard key={book._id || book.id || index} book={book} /> ))} </div> <div className="flex justify-center space-x-2 mt-6"> <div className="w-2 h-2 rounded-full bg-[#4f0f87]"></div> <div className="w-2 h-2 rounded-full bg-gray-300"></div> <div className="w-2 h-2 rounded-full bg-gray-300"></div> </div> </section> <section> <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center"> <div> <h2 className="text-2xl font-bold mb-4">Bạn có biết về chúng tôi không?</h2> <p className="text-gray-600 mb-4 leading-relaxed"> Chúng tôi là Bookworld - chuyên về sách trực tuyến và mục tiêu của chúng tôi là mang đến những cuốn sách có thể thay đổi cuộc sống của bạn hoặc đưa bạn thoát khỏi thế giới thực để bước vào một thế giới tuyệt vời hơn. Bookworld tự hào được hợp tác với những nhà xuất bản nổi tiếng nhất để mang lại trải nghiệm tốt nhất cho bạn. <br /><br /> Nếu bạn yêu thích sách, hãy đăng ký nhận bản tin của chúng tôi! </p> <div className="space-y-4"> <input type="email" placeholder="Nhập email của bạn" className="w-full bg-white border border-gray-400 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#51348f] focus:border-transparent" /> <button onClick={(e) => { e.preventDefault(); alert('Cảm ơn bạn đã đăng ký!'); }} className="w-full bg-[#4f0f87] hover:bg-[#51348f] text-white py-3 rounded transition-colors duration-200 shadow-md hover:shadow-lg" > Đăng ký </button> </div> </div> <div className="flex flex-col items-center justify-center space-y-4"> <a href="https://facebook.com/bookworld" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 bg-[#1877F2] text-white px-6 py-3 rounded-lg hover:bg-[#1864D6] transition-all duration-200 shadow-md hover:shadow-lg w-full justify-center" > <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"> <path d="M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z"/> </svg> <span className="font-medium">Theo dõi Fanpage BookWorld</span> </a> <div className="w-full bg-gray-100 p-4 rounded-lg text-center"> <p className="text-sm text-gray-600"> Fanpage: <span className="font-semibold">BookWorld - Thế Giới Sách</span> <br /> Nhấn vào nút để truy cập Facebook và tham gia cộng đồng của chúng tôi. </p> </div> </div> </div> </section>
+            <section> 
+                <h2 className="text-2xl font-bold mb-6 text-left">Có thể mua ngay</h2>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"> {mustBuyBooks.map((book, index) => ( <BookCard key={book._id || book.id || index} book={book} /> ))} </div>
+                  <div className="flex justify-center space-x-2 mt-6"> <div className="w-2 h-2 rounded-full bg-[#4f0f87]">
+                    </div> 
+                    <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                     <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                      </div>
+                       </section>
+                       <section>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center"> 
+                            <div>
+                                 <h2 className="text-2xl font-bold mb-4">Bạn có biết về chúng tôi không?</h2> 
+                                 <p className="text-gray-600 mb-4 leading-relaxed"> Chúng tôi là Bookworld - chuyên về sách trực tuyến và mục tiêu của chúng tôi là mang đến những cuốn sách có thể thay đổi cuộc sống của bạn hoặc đưa bạn thoát khỏi thế giới thực để bước vào một thế giới tuyệt vời hơn. Bookworld tự hào được hợp tác với những nhà xuất bản nổi tiếng nhất để mang lại trải nghiệm tốt nhất cho bạn. <br />
+                                 <br /> Nếu bạn yêu thích sách, hãy đăng ký nhận bản tin của chúng tôi! </p> 
+                                 <div className="space-y-4"> <input type="email" placeholder="Nhập email của bạn" className="w-full bg-white border border-gray-400 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#51348f] focus:border-transparent" />
+                                  <button onClick={(e) => { e.preventDefault(); alert('Cảm ơn bạn đã đăng ký!'); }} className="w-full bg-[#4f0f87] hover:bg-[#51348f] text-white py-3 rounded transition-colors duration-200 shadow-md hover:shadow-lg" > Đăng ký </button> 
+                                  </div>
+                                   </div> 
+                                   <div className="flex flex-col items-center justify-center space-y-4"> 
+                                    <a href="https://facebook.com/bookworld" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 bg-[#1877F2] text-white px-6 py-3 rounded-lg hover:bg-[#1864D6] transition-all duration-200 shadow-md hover:shadow-lg w-full justify-center" >
+                                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"> 
+                                        <path d="M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z"/>
+                                         </svg>
+                                          <span className="font-medium">Theo dõi Fanpage BookWorld</span> 
+                                          </a>
+                                           <div className="w-full bg-gray-100 p-4 rounded-lg text-center"> 
+                                            <p className="text-sm text-gray-600"> Fanpage: <span className="font-semibold">BookWorld - Thế Giới Sách</span>
+                                             <br /> Nhấn vào nút để truy cập Facebook và tham gia cộng đồng của chúng tôi. </p>
+                                              </div>
+                                               </div>
+                                                </div>
+                                                 </section>
         </div>
     );
 };
