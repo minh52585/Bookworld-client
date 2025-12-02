@@ -16,29 +16,42 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    setError('');
-    setLoading(true);
+  setError('');
+  setLoading(true);
 
-    try {
-      const response = await axios.post('http://localhost:5004/api/auth/login', {
-        email,
-        password
-      });
+  try {
+    const response = await axios.post('http://localhost:5004/api/auth/login', {
+      email,
+      password
+    });
 
-      // Lưu token vào localStorage
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        alert('Đăng nhập thành công!');
-        navigate('/'); // Chuyển về trang chủ
+    // Lưu token + user
+    if (response.data.token) {
+
+      // Lưu token
+      localStorage.setItem('token', response.data.token);
+
+      // Lưu user
+      if (response.data.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
       }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || 'Đăng nhập thất bại!';
-      setError(errorMsg);
-      console.error('Login error:', err);
-    } finally {
-      setLoading(false);
+
+      // Bắn event cho Header cập nhật
+      window.dispatchEvent(new Event("userLogin"));
+
+      alert('Đăng nhập thành công!');
+      navigate('/'); 
     }
-  };
+
+  } catch (err: any) {
+    const errorMsg = err.response?.data?.message || 'Đăng nhập thất bại!';
+    setError(errorMsg);
+    console.error('Login error:', err);
+
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-12 px-4">

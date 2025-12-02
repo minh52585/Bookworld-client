@@ -123,37 +123,34 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
           </a>
 
           {/* MENU NGƯỜI DÙNG */}
+          {/* USER DROPDOWN */}
           <div className="relative" ref={userMenuRef}>
-            <div
-              onClick={() => setOpenUserMenu((prev) => !prev)}
-              className="hover:text-purple-700 text-purple-600 text-xl cursor-pointer"
-            >
-              <i className="fas fa-user"></i>
-            </div>
+            {user ? (
+              // ==== KHI ĐĂNG NHẬP ====
+              <div className="flex items-center space-x-2 text-purple-700">
+                <span>
+                  Xin chào, <b>{user.fullname || user.email}</b>
+                </span>
 
-            {openUserMenu && (
-              <div className="absolute top-full right-0 mt-2 w-48 bg-white border rounded shadow-md z-50">
-                {user ? (
-                  <>
-                    <div className="px-4 py-2 font-semibold">
-                      Xin chào, {user.fullname || user.email}
-                    </div>
-                    <Link
-                      to="/order"
-                      className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
-                    >
-                      Đơn hàng của tôi
-                    </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-red-600 hover:underline text-sm"
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            ) : (
+              // ==== KHI CHƯA ĐĂNG NHẬP ====
+              <>
+                <div
+                  onClick={() => setOpenUserMenu((prev) => !prev)}
+                  className="hover:text-purple-700 text-purple-600 text-xl cursor-pointer"
+                >
+                  <i className="fas fa-user"></i>
+                </div>
 
-                    <button
-                      onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
-                    >
-                      Đăng xuất
-                    </button>
-                  </>
-                ) : (
-                  <>
+                {openUserMenu && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-white border rounded shadow-md z-50">
                     <Link
                       to="/login"
                       className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
@@ -166,9 +163,9 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
                     >
                       Đăng ký
                     </Link>
-                  </>
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>
