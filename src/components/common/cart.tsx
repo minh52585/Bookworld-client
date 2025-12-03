@@ -37,10 +37,16 @@ function Cart() {
   };
 
   const increaseQuantity = async (productId: string) => {
+    const item = cartItems.find((i: any) => i.product_id?._id === productId);
+    if (!item) return;
+    const newQty = item.quantity + 1;
+
     try {
       await axios.put(
         `${API_BASE_URL}/cart/items/${productId}`,
-        { quantity: 1 }, // 1 = tăng lên 1, BE sẽ xử lý
+        {
+          quantity: newQty,
+        },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -54,12 +60,15 @@ function Cart() {
   const decreaseQuantity = async (productId: string) => {
     const item = cartItems.find((i: any) => i.product_id?._id === productId);
     if (!item) return;
-
     const newQty = item.quantity - 1;
+    if (newQty < 1) return; // Không giảm dưới 1
+
     try {
       await axios.put(
         `${API_BASE_URL}/cart/items/${productId}`,
-        { quantity: newQty },
+        {
+          quantity: newQty,
+        },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }

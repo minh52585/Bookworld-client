@@ -15,14 +15,37 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const validateEmail = (email: string) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    // Tối thiểu 8 ký tự, ít nhất 1 chữ cái và 1 số
+    const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    return regex.test(password);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
+    if (!validateEmail(email)) {
+      setError("Email không hợp lệ");
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      setError(
+        "Mật khẩu phải ít nhất 8 ký tự và chứa ít nhất 1 chữ cái và 1 số"
+      );
+      return;
+    }
+
+    setLoading(true);
     try {
-      await login(email, password); // Context sẽ set user/token
-      onClose(); // Đóng modal ngay khi login thành công
+      await login(email, password);
+      onClose();
     } catch (err: any) {
       setError(err.response?.data?.message || "Đăng nhập thất bại");
     } finally {
