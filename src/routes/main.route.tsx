@@ -9,7 +9,7 @@ import Register from "../pages/Auth/Register";
 import ForgotPassword from "../pages/Auth/ForgotPassword";
 import OrderList from "../pages/order/order";
 import OrderDetailPage from "../pages/order/orderDetail";
-
+import ThanhToan from "../components/common/thanhtoan";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -50,6 +50,10 @@ export const router = createBrowserRouter([
       {
         path: "orders/:id",
         element: <OrderDetailPage />,
+      },
+      {
+        path: "thanhtoan",
+        element: <ThanhToan />,
       },
     ],
   },
