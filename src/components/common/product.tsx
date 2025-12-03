@@ -10,7 +10,7 @@ type Book = {
   title?: string;
   author: string;
   price: number | string;
-  image: string;
+  images: string[];
   category?: string;
   description?: string;
 };
@@ -35,6 +35,15 @@ const BookCard = ({
   const getBookName = () => book.title || book.name || "Sản phẩm";
   const getBookId = () => book._id || book.id;
 
+  const getImageUrl = () => {
+    if (book.images && book.images.length > 0) {
+      return book.images[0].startsWith("http")
+        ? book.images[0]
+        : `${API_BASE_URL}/${book.images[0]}`;
+    }
+    return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+  };
+
   const handleCardClick = () => {
     const id = getBookId();
     if (id) {
@@ -54,7 +63,7 @@ const BookCard = ({
       onClick={handleCardClick}
     >
       <img
-        src={book.image}
+        src={getImageUrl()}
         alt={getBookName()}
         className="h-60 w-full object-cover rounded mb-4"
         onError={(e) => {
@@ -156,7 +165,6 @@ const BookCarousel: React.FC = () => {
     }
   };
 
-  // Khi login thành công, thêm sản phẩm đang chờ nếu có
   const handleLoginSuccess = () => {
     setShowLoginModal(false);
     if (pendingBook) {
@@ -198,6 +206,7 @@ const BookCarousel: React.FC = () => {
           </div>
         </div>
       )}
+
       <section className="bg-white py-12 px-4 rounded-lg shadow-sm">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 items-center">
           <div className="space-y-4 md:text-left">
@@ -211,11 +220,7 @@ const BookCarousel: React.FC = () => {
 
             <p className="text-gray-600 leading-relaxed">
               Doraemon, được sáng tạo bởi Fujiko F. Fujio, là một trong những bộ
-              manga nổi tiếng nhất mọi thời đại. Bộ truyện đã được xuất bản từ
-              năm 1969 và được chuyển thể thành phim hoạt hình, với hơn 40 phim
-              điện ảnh. Doraemon đã trở thành biểu tượng văn hóa của Nhật Bản và
-              được yêu thích trên toàn thế giới với những câu chuyện về tình
-              bạn, khoa học viễn tưởng và những bài học ý nghĩa...
+              manga nổi tiếng nhất mọi thời đại...
             </p>
 
             <button className="bg-[#4f0f87] hover:bg-[#51348f] text-white px-6 py-3 rounded transition-colors duration-200 shadow-md hover:shadow-lg">

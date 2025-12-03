@@ -4,9 +4,14 @@ import { useAuth } from "../../contexts/AuthContext";
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onLoginSuccess?: () => void; // thêm prop callback
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+const LoginModal: React.FC<LoginModalProps> = ({
+  isOpen,
+  onClose,
+  onLoginSuccess,
+}) => {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +27,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
     try {
       await login(email, password); // Context sẽ set user/token
-      onClose(); // Đóng modal ngay khi login thành công
+      if (onLoginSuccess) onLoginSuccess(); // gọi callback khi login thành công
+      onClose(); // Đóng modal
     } catch (err: any) {
       setError(err.response?.data?.message || "Đăng nhập thất bại");
     } finally {
