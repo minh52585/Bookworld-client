@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 const ForgotPassword: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = () => {
-    // TODO: Gọi API gửi email reset password
-    console.log('Gửi email reset mật khẩu tới:', email);
+    console.log("Gửi email reset mật khẩu tới:", email);
     setIsSubmitted(true);
   };
 
@@ -18,12 +17,13 @@ const ForgotPassword: React.FC = () => {
           <div className="inline-block p-4 bg-purple-100 rounded-full mb-4">
             <i className="fas fa-key text-4xl text-purple-600"></i>
           </div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Quên Mật Khẩu?</h1>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Quên Mật Khẩu?
+          </h1>
           <p className="text-gray-600">
-            {isSubmitted 
-              ? 'Kiểm tra email của bạn để đặt lại mật khẩu'
-              : 'Nhập email của bạn để nhận link đặt lại mật khẩu'
-            }
+            {isSubmitted
+              ? "Kiểm tra email của bạn để đặt lại mật khẩu"
+              : "Nhập email của bạn để nhận link đặt lại mật khẩu"}
           </p>
         </div>
 
@@ -48,7 +48,7 @@ const ForgotPassword: React.FC = () => {
                   />
                 </div>
 
-                <button 
+                <button
                   onClick={handleSubmit}
                   className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 font-semibold transition shadow-lg"
                 >
@@ -61,7 +61,9 @@ const ForgotPassword: React.FC = () => {
               <div className="inline-block p-3 bg-green-100 rounded-full mb-2">
                 <i className="fas fa-check-circle text-3xl text-green-600"></i>
               </div>
-              <h3 className="text-xl font-semibold text-gray-800">Email đã được gửi!</h3>
+              <h3 className="text-xl font-semibold text-gray-800">
+                Email đã được gửi!
+              </h3>
               <p className="text-gray-600">
                 Chúng tôi đã gửi link đặt lại mật khẩu tới email: <br />
                 <span className="font-semibold text-purple-600">{email}</span>
@@ -80,8 +82,8 @@ const ForgotPassword: React.FC = () => {
 
           {/* Back to Login */}
           <div className="text-center mt-6 pt-6 border-t border-gray-200">
-            <a 
-              href="/login" 
+            <a
+              href="/login"
               className="text-gray-600 hover:text-purple-600 font-medium inline-flex items-center gap-2"
             >
               <i className="fas fa-arrow-left"></i>
@@ -93,8 +95,11 @@ const ForgotPassword: React.FC = () => {
         {/* Help Text */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Bạn cần hỗ trợ?{' '}
-            <a href="#" className="text-purple-600 hover:text-purple-700 underline">
+            Bạn cần hỗ trợ?{" "}
+            <a
+              href="#"
+              className="text-purple-600 hover:text-purple-700 underline"
+            >
               Liên hệ chúng tôi
             </a>
           </p>

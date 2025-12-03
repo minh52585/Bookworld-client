@@ -54,10 +54,6 @@ const LoginPage: React.FC = () => {
             Đăng nhập bằng
           </h2>
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center gap-3 bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 font-semibold transition shadow-md">
-              <i className="fab fa-facebook-f"></i>
-              Facebook
-            </button>
             <button className="w-full flex items-center justify-center gap-3 bg-red-500 text-white px-6 py-3 rounded-md hover:bg-red-600 font-semibold transition shadow-md">
               <i className="fab fa-google"></i>
               Google

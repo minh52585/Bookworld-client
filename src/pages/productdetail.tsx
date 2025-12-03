@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "./Auth/LoginModal";
+import { API_BASE_URL } from "../configs/api";
 
 interface Product {
   _id: string;
@@ -34,6 +35,7 @@ const BookDetailPage: React.FC = () => {
   const [loadingLastViewed, setLoadingLastViewed] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCartNotification, setShowCartNotification] = useState(false);
+  const [loginMessage, setLoginMessage] = useState<string | null>(null);
 
   const { isAuthenticated } = useAuth();
 
@@ -41,7 +43,7 @@ const BookDetailPage: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await axios.get(`http://localhost:5004/api/products/${id}`);
+        const res = await axios.get(`${API_BASE_URL}/products/${id}`);
         setProduct(res.data.data);
       } catch (err) {
         setError("Không tìm thấy sản phẩm!");
@@ -51,38 +53,20 @@ const BookDetailPage: React.FC = () => {
     };
     fetchProduct();
   }, [id]);
-
-  // Fetch related products
   useEffect(() => {
     const getRelated = async () => {
       try {
-        const res = await axios.get(
-          `http://localhost:5004/api/products/${id}/related`
-        );
-
+        const res = await axios.get(`${API_BASE_URL}/products/${id}/related`);
         let products: Product[] = [];
         const data = res.data;
-
-        if (Array.isArray(data)) {
-          products = data;
-        } else if (data.data && Array.isArray(data.data)) {
-          products = data.data;
-        } else if (
-          data.data &&
-          data.data.items &&
-          Array.isArray(data.data.items)
-        ) {
+        if (Array.isArray(data)) products = data;
+        else if (data.data && Array.isArray(data.data)) products = data.data;
+        else if (data.data?.items && Array.isArray(data.data.items))
           products = data.data.items;
-        } else if (
-          data.relatedProducts &&
-          Array.isArray(data.relatedProducts)
-        ) {
+        else if (data.relatedProducts && Array.isArray(data.relatedProducts))
           products = data.relatedProducts;
-        }
-
         setRelatedProducts(products.slice(0, 8));
-      } catch (err) {
-        console.error("Error fetching related products:", err);
+      } catch {
         setRelatedProducts([]);
       } finally {
         setLoadingRelated(false);
@@ -91,53 +75,38 @@ const BookDetailPage: React.FC = () => {
     getRelated();
   }, [id]);
 
-  // Fetch last viewed products
   useEffect(() => {
     const fetchLastViewed = async () => {
       try {
         const viewedIds = JSON.parse(
           localStorage.getItem("lastViewed") || "[]"
         );
-
         if (viewedIds.length > 0) {
           const promises = viewedIds.slice(0, 4).map((productId: string) =>
             axios
-              .get(`http://localhost:5004/api/products/${productId}`)
+              .get(`${API_BASE_URL}/products/${productId}`)
               .then((res) => res.data.data)
               .catch(() => null)
           );
-
           const products = await Promise.all(promises);
-          const validProducts = products.filter((p) => p !== null);
-          setLastViewed(validProducts);
+          setLastViewed(products.filter((p) => p !== null));
         } else {
-          const res = await axios.get(
-            "http://localhost:5004/api/products?limit=4"
-          );
-
+          const res = await axios.get(`${API_BASE_URL}/products?limit=4`);
           let products: Product[] = [];
-          if (res.data.data && res.data.data.items) {
-            products = res.data.data.items;
-          } else if (Array.isArray(res.data.data)) {
-            products = res.data.data;
-          } else if (Array.isArray(res.data)) {
-            products = res.data;
-          }
-
+          if (res.data.data?.items) products = res.data.data.items;
+          else if (Array.isArray(res.data.data)) products = res.data.data;
+          else if (Array.isArray(res.data)) products = res.data;
           setLastViewed(products);
         }
-      } catch (err) {
-        console.error("Error fetching last viewed:", err);
+      } catch {
         setLastViewed([]);
       } finally {
         setLoadingLastViewed(false);
       }
     };
-
     fetchLastViewed();
   }, [id]);
 
-  // Lưu sản phẩm hiện tại vào localStorage
   useEffect(() => {
     if (product && id) {
       const viewedIds = JSON.parse(localStorage.getItem("lastViewed") || "[]");
@@ -149,52 +118,45 @@ const BookDetailPage: React.FC = () => {
     }
   }, [product, id]);
 
+  // Quantity handlers
   const handleDecrement = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
-
   const handleIncrement = () => setQuantity(quantity + 1);
 
+  // Product click handler
   const handleProductClick = (productId: string) => {
     navigate(`/products/${productId}`);
     window.scrollTo(0, 0);
   };
 
-  const handleAddToCart = () => {
+  //  handleAddToCart
+  const handleAddToCart = async () => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
       return;
     }
-
     if (!product) return;
 
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const existingItemIndex = cart.findIndex(
-      (item: any) => item._id === product._id
-    );
+    try {
+      await axios.post(
+        `${API_BASE_URL}/cart/items`,
+        { product_id: product._id, quantity: quantity },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
 
-    if (existingItemIndex > -1) {
-      cart[existingItemIndex].quantity += quantity;
-    } else {
-      cart.push({
-        ...product,
-        quantity: quantity,
-      });
+      setShowCartNotification(true);
+      setTimeout(() => setShowCartNotification(false), 2000);
+    } catch (err) {
+      console.error("Lỗi thêm vào giỏ hàng:", err);
     }
-
-    localStorage.setItem("cart", JSON.stringify(cart));
-
-    setShowCartNotification(true);
-    setTimeout(() => setShowCartNotification(false), 3000);
   };
 
-  const getProductName = (product: Product) => {
-    return product.title || product.name || "Sản phẩm";
-  };
-
-  const getProductImage = (product: Product) => {
-    return product.image || product.images?.[0] || "/placeholder.jpg";
-  };
+  const getProductName = (p: Product) => p.title || p.name || "Sản phẩm";
+  const getProductImage = (p: Product) =>
+    p.image || p.images?.[0] || "/placeholder.jpg";
 
   if (loading)
     return <div className="p-10 text-center text-xl">Đang tải...</div>;

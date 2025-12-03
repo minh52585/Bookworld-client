@@ -4,16 +4,10 @@ import { useAuth } from "../../contexts/AuthContext";
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: () => void;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({
-  isOpen,
-  onClose,
-  onLoginSuccess,
-}) => {
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const { login } = useAuth();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,17 +17,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setError("");
 
     try {
-      await login(email, password);
-
-      onLoginSuccess();
-      onClose();
+      await login(email, password); // Context sẽ set user/token
+      onClose(); // Đóng modal ngay khi login thành công
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Đăng nhập thất bại!";
-      setError(msg);
+      setError(err.response?.data?.message || "Đăng nhập thất bại");
     } finally {
       setLoading(false);
     }
@@ -42,7 +33,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-96 p-6 animate-fadeIn">
-        {/* Header */}
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
           Đăng Nhập
         </h2>
@@ -50,16 +40,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
           Bạn cần đăng nhập để tiếp tục
         </p>
 
-        {/* Error */}
         {error && (
           <div className="p-3 mb-4 bg-red-100 text-red-700 border border-red-300 rounded">
             {error}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email
@@ -74,7 +61,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
             />
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Mật khẩu
@@ -89,7 +75,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
             />
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -99,7 +84,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
           </button>
         </form>
 
-        {/* Cancel */}
         <button
           onClick={onClose}
           className="w-full mt-4 text-gray-600 hover:text-gray-800"

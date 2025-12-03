@@ -1,100 +1,94 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { ShoppingCart } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
 
-interface CartItem {
-  _id?: string;
-  id?: number;
-  name?: string;
-  title?: string;
-  description: string;
-  price: number;
-  quantity: number;
-  image: string;
-}
+const API_BASE_URL = "http://localhost:5004/api";
 
 function Cart() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { user, isAuthenticated } = useAuth();
+  const [cartItems, setCartItems] = useState([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Kiểm tra đăng nhập khi vào trang giỏ hàng
     if (!isAuthenticated) {
       setShowLoginModal(true);
       return;
     }
-
-    const data = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCartItems(data);
+    fetchCart();
   }, [isAuthenticated]);
 
-  const increaseQuantity = (id: number | string) => {
-    setCartItems((items) => {
-      const updated = items.map((item) => {
-        const itemId = item._id || item.id;
-        return itemId === id ? { ...item, quantity: item.quantity + 1 } : item;
-      });
-      localStorage.setItem("cart", JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const decreaseQuantity = (id: number | string) => {
-    setCartItems((items) => {
-      const updated = items.map((item) => {
-        const itemId = item._id || item.id;
-        return itemId === id && item.quantity > 1
-          ? { ...item, quantity: item.quantity - 1 }
-          : item;
+  const fetchCart = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/cart`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
-      localStorage.setItem("cart", JSON.stringify(updated));
-      return updated;
-    });
+      setCartItems(res.data.data?.items || []);
+    } catch (err) {
+      console.error("Lỗi lấy giỏ hàng:", err);
+    }
+    setLoading(false);
   };
 
-  const TrashIcon = () => (
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-      />
-    </svg>
-  );
+  const increaseQuantity = async (productId: string) => {
+    try {
+      await axios.put(
+        `${API_BASE_URL}/cart/items/${productId}`,
+        { quantity: 1 }, // 1 = tăng lên 1, BE sẽ xử lý
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      fetchCart();
+    } catch (error) {
+      console.error("Lỗi tăng số lượng", error);
+    }
+  };
 
-  const removeItem = (id: number | string) => {
-    const updated = cartItems.filter((item) => {
-      const itemId = item._id || item.id;
-      return itemId !== id;
-    });
-    setCartItems(updated);
-    localStorage.setItem("cart", JSON.stringify(updated));
+  const decreaseQuantity = async (productId: string) => {
+    const item = cartItems.find((i: any) => i.product_id?._id === productId);
+    if (!item) return;
+
+    const newQty = item.quantity - 1;
+    try {
+      await axios.put(
+        `${API_BASE_URL}/cart/items/${productId}`,
+        { quantity: newQty },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      fetchCart();
+    } catch (error) {
+      console.error("Lỗi giảm số lượng", error);
+    }
+  };
+
+  const removeItem = async (productId: string) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/cart/items/${productId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      fetchCart();
+    } catch (error) {
+      console.error("Lỗi xoá sản phẩm", error);
+    }
   };
 
   const total = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item: any) => sum + item.product_id.price * item.quantity,
     0
   );
 
-  const handleLoginSuccess = () => {
-    const data = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCartItems(data);
-  };
-
   const handleCloseLoginModal = () => {
     setShowLoginModal(false);
-    navigate("/"); // Redirect về trang chủ nếu không đăng nhập
+    navigate("/");
   };
 
   if (!isAuthenticated) {
@@ -102,7 +96,7 @@ function Cart() {
       <LoginModal
         isOpen={showLoginModal}
         onClose={handleCloseLoginModal}
-        onLoginSuccess={handleLoginSuccess}
+        onLoginSuccess={fetchCart}
       />
     );
   }
@@ -136,73 +130,74 @@ function Cart() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b text-gray-600 text-sm uppercase">
-                  <th className="p-3 w-[15%]">Ảnh</th>
+                  <th className="p-3 w-[15%]">Ảnh sản phẩm</th>
                   <th className="p-3 text-center w-[15%]">Tên sản phẩm</th>
-                  <th className="p-3">Mô tả</th>
-                  <th className="p-3 text-center w-[10%]">Giá</th>
+                  <th className="p-3 text-center">Giá</th>
                   <th className="p-3 text-center w-[15%]">Số lượng</th>
                   <th className="p-3 text-center w-[10%]">Tổng</th>
                   <th className="p-3 text-center w-[10%]">Xóa</th>
                 </tr>
               </thead>
+
               <tbody>
-                {cartItems.map((item) => {
-                  const itemId = item._id || item.id;
-                  const itemName = item.title || item.name || "Sản phẩm";
+                {cartItems.map((item: any) => {
+                  const product = item.product_id;
+                  const id = product._id;
 
                   return (
-                    <tr
-                      key={itemId}
-                      className="border-b hover:bg-gray-50 transition duration-150"
-                    >
-                      <td className="p-3 flex items-center justify-center">
+                    <tr key={id} className="border-b hover:bg-gray-50">
+                      {/* Ảnh */}
+                      <td className="p-3 flex ">
                         <img
-                          src={item.image}
-                          alt={itemName}
+                          src={product.images?.[0]}
                           className="w-16 h-16 rounded-xl object-cover"
+                          alt={product.name}
                         />
                       </td>
 
-                      <td className="p-3 text-center font-semibold text-gray-800">
-                        {itemName}
+                      {/* Tên */}
+                      <td className="p-3 text-center font-semibold">
+                        {product.name}
                       </td>
 
-                      <td className="p-3 text-gray-600">{item.description}</td>
-
+                      {/* Giá */}
                       <td className="p-3 text-center text-purple-700 font-semibold">
-                        {(item.price ?? 0).toLocaleString()} đ
+                        {product.price.toLocaleString()} đ
                       </td>
 
+                      {/* Số lượng */}
                       <td className="p-3 text-center">
-                        <div className="flex justify-center items-center space-x-2">
+                        <div className="flex justify-center items-center space-x-2 w-max mx-auto px-2 py-1 rounded">
                           <button
-                            onClick={() => decreaseQuantity(itemId)}
-                            className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-lg font-bold hover:bg-purple-700 transition"
+                            onClick={() => decreaseQuantity(id)}
+                            className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center"
                           >
                             −
                           </button>
-                          <span className="text-lg font-medium text-gray-800 w-6 text-center">
+                          <span className="text-lg font-medium">
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => increaseQuantity(itemId)}
-                            className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-lg font-bold hover:bg-purple-700 transition"
+                            onClick={() => increaseQuantity(id)}
+                            className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center"
                           >
                             +
                           </button>
                         </div>
                       </td>
 
-                      <td className="p-3 text-center font-semibold text-gray-700">
-                        {((item.price ?? 0) * item.quantity).toLocaleString()} đ
+                      {/* Tổng */}
+                      <td className="p-3 text-center font-semibold">
+                        {(product.price * item.quantity).toLocaleString()} đ
                       </td>
 
+                      {/* Xóa */}
                       <td className="p-3 text-center">
                         <button
-                          onClick={() => removeItem(itemId)}
-                          className="ml-auto text-red-500 hover:text-red-700 transition"
+                          onClick={() => removeItem(id)}
+                          className="text-red-500 hover:text-red-700"
                         >
-                          <TrashIcon />
+                          Xóa
                         </button>
                       </td>
                     </tr>
@@ -216,14 +211,12 @@ function Cart() {
                 <h2 className="text-lg font-bold text-purple-700 mb-3 text-center">
                   Tổng Đơn hàng
                 </h2>
+
                 <div className="flex justify-between text-gray-700 mb-2">
                   <span>Tổng tiền</span>
                   <span>{total.toLocaleString()} đ</span>
                 </div>
-                <div className="flex justify-between font-semibold text-gray-900 mb-5">
-                  <span>Tổng thanh toán</span>
-                  <span>{total.toLocaleString()} đ</span>
-                </div>
+
                 <button className="bg-purple-600 text-white w-full py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition">
                   Thanh Toán
                 </button>

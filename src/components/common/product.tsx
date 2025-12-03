@@ -43,7 +43,7 @@ const BookCard = ({
     }
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onAddToCart(book);
   };
@@ -69,7 +69,7 @@ const BookCard = ({
       <p className="text-sm text-gray-600 mb-2">{book.author}</p>
       <p className="font-bold text-red-500 mb-3">{formatPrice(book.price)} đ</p>
       <button
-        onClick={handleAddToCart}
+        onClick={handleAddToCartClick}
         className="bg-[#4f0f87] hover:bg-[#51348f] text-white py-2 px-3 rounded mt-auto transition-colors duration-200"
       >
         Thêm vào giỏ hàng
@@ -87,190 +87,91 @@ const BookCarousel: React.FC = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingBook, setPendingBook] = useState<Book | null>(null);
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, token } = useAuth();
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        setError(null);
+        const res = await fetch(`${API_BASE_URL}/products?limit=8`);
+        const data = await res.json();
 
-        const response = await fetch(`${API_BASE_URL}/products?limit=8`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            `HTTP Error: ${response.status} - ${response.statusText}`
-          );
-        }
-
-        const data = await response.json();
         let products: Book[] = [];
-
-        if (Array.isArray(data)) {
-          products = data;
-        } else if (
-          data.data &&
-          data.data.items &&
-          Array.isArray(data.data.items)
-        ) {
+        if (Array.isArray(data)) products = data;
+        else if (data.data && Array.isArray(data.data)) products = data.data;
+        else if (data.data && data.data.items && Array.isArray(data.data.items))
           products = data.data.items;
-        } else if (data.items && Array.isArray(data.items)) {
-          products = data.items;
-        } else if (data.products && Array.isArray(data.products)) {
-          products = data.products;
-        } else if (data.data && Array.isArray(data.data)) {
-          products = data.data;
-        } else if (data.result && Array.isArray(data.result)) {
-          products = data.result;
-        }
+        else if (data.items && Array.isArray(data.items)) products = data.items;
 
-        if (products.length > 0) {
-          setSelectedBooks(products.slice(0, 4));
-          setMustBuyBooks(products.slice(4, 8));
-        } else {
-          throw new Error("Không có sản phẩm nào từ API");
-        }
+        setSelectedBooks(products.slice(0, 4));
+        setMustBuyBooks(products.slice(4, 8));
       } catch (err) {
-        console.error("Lỗi khi gọi API:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Không thể kết nối đến server";
-        setError(errorMessage);
-
-        // Dữ liệu mẫu khi có lỗi
-        setSelectedBooks([
-          {
-            _id: "1",
-            title: "Doraemon Movie 44",
-            author: "Fujiko F Fujio",
-            price: 54000,
-            image:
-              "https://cdn0.fahasa.com/media/catalog/product/d/o/doraemon-movie-44_bia_final.jpg",
-          },
-          {
-            _id: "2",
-            title: "Người Đàn Ông Mang Tên OVE",
-            author: "Fredrik Backman",
-            price: 134000,
-            image:
-              "https://salt.tikicdn.com/cache/w1200/ts/product/5e/18/24/2a6154ba08df6ce6161c13f4303fa19e.jpg",
-          },
-          {
-            _id: "3",
-            title: "Trường Ca Achilles",
-            author: "Madeline Miller",
-            price: 127500,
-            image:
-              "https://cdn0.fahasa.com/media/catalog/product/t/r/truong_ca_achilles_1_2018_10_19_10_37_38.jpg",
-          },
-          {
-            _id: "4",
-            title: "Nhà Giả Kim",
-            author: "Paulo Coelho",
-            price: 64500,
-            image:
-              "https://salt.tikicdn.com/cache/w1200/ts/product/45/3b/fc/aa81d0ad72c714c5d8d31c61dc3f11d0.jpg",
-          },
-        ]);
-        setMustBuyBooks([
-          {
-            _id: "5",
-            title: "Cây Cam Ngọt Của Tôi",
-            author: "José Mauro de Vasconcelos",
-            price: 88500,
-            image:
-              "https://cdn0.fahasa.com/media/catalog/product/8/9/8935235226272.jpg",
-          },
-          {
-            _id: "6",
-            title: "Hai Số Phận",
-            author: "Jeffrey Archer",
-            price: 185500,
-            image:
-              "https://cdn0.fahasa.com/media/catalog/product/h/a/hai_so_phan_tb_2022.jpg",
-          },
-          {
-            _id: "7",
-            title: "Thị Trấn Nhỏ, Giấc Mơ Lớn",
-            author: "Fredrik Backman",
-            price: 176000,
-            image:
-              "https://salt.tikicdn.com/cache/w1200/ts/product/b6/c0/21/b6c021e2d0cb7be50a34b86c57e9e964.jpg",
-          },
-          {
-            _id: "8",
-            title: "Lớp Có Tang Sự",
-            author: "Doo Vandenis",
-            price: 204000,
-            image:
-              "https://cdn0.fahasa.com/media/catalog/product/l/o/lop-co-tang-su.jpg",
-          },
-        ]);
+        console.error(err);
+        setError("Không thể tải sản phẩm");
       } finally {
         setLoading(false);
       }
     };
-
     fetchProducts();
   }, []);
 
   const handleAddToCart = (book: Book) => {
-    // Kiểm tra đăng nhập
     if (!isAuthenticated) {
       setPendingBook(book);
       setShowLoginModal(true);
       return;
     }
-
     addToCartHandler(book);
   };
+  const addToCartHandler = async (book: Book) => {
+    try {
+      if (!isAuthenticated) {
+        throw new Error("Người dùng chưa đăng nhập");
+      }
 
-  const addToCartHandler = (book: Book) => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const existingItemIndex = cart.findIndex(
-      (item: any) => (item._id || item.id) === (book._id || book.id)
-    );
-
-    if (existingItemIndex > -1) {
-      cart[existingItemIndex].quantity =
-        (cart[existingItemIndex].quantity || 1) + 1;
-    } else {
-      cart.push({
-        ...book,
-        quantity: 1,
+      const response = await fetch(`${API_BASE_URL}/cart/items`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          product_id: book._id,
+          quantity: 1,
+        }),
       });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(
+          `Thêm vào giỏ hàng thất bại: ${response.status} - ${errText}`
+        );
+      }
+
+      setShowCartNotification(true);
+      setTimeout(() => setShowCartNotification(false), 3000);
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message);
     }
-
-    localStorage.setItem("cart", JSON.stringify(cart));
-
-    setShowCartNotification(true);
-    setTimeout(() => setShowCartNotification(false), 3000);
   };
 
+  // Khi login thành công, thêm sản phẩm đang chờ nếu có
   const handleLoginSuccess = () => {
+    setShowLoginModal(false);
     if (pendingBook) {
       addToCartHandler(pendingBook);
       setPendingBook(null);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto py-10 px-4">
-        <div className="flex flex-col justify-center items-center h-64 space-y-4">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#4f0f87] border-t-transparent"></div>
-          <p className="text-gray-600 text-lg">Đang tải sản phẩm...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading)
+    return <div className="p-10 text-center text-xl">Đang tải sản phẩm...</div>;
+  if (error)
+    return <div className="p-10 text-center text-red-500 text-xl">{error}</div>;
 
   return (
-    <div className="max-w-7xl mx-auto py-10 px-4 space-y-16">
+    <div className="space-y-10">
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
@@ -278,7 +179,7 @@ const BookCarousel: React.FC = () => {
       />
 
       {showCartNotification && (
-        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in-down">
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">
             <svg
               className="w-6 h-6"
@@ -297,7 +198,6 @@ const BookCarousel: React.FC = () => {
           </div>
         </div>
       )}
-
       <section className="bg-white py-12 px-4 rounded-lg shadow-sm">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 items-center">
           <div className="space-y-4 md:text-left">
@@ -361,98 +261,28 @@ const BookCarousel: React.FC = () => {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold mb-6 text-left">Lựa chọn cho bạn</h2>
+        <h2 className="text-2xl font-bold mb-6">Lựa chọn cho bạn</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {selectedBooks.map((book, index) => (
+          {selectedBooks.map((book, idx) => (
             <BookCard
-              key={book._id || book.id || index}
+              key={book._id || book.id || idx}
               book={book}
               onAddToCart={handleAddToCart}
             />
           ))}
         </div>
-        <div className="flex justify-center space-x-2 mt-6">
-          <div className="w-2 h-2 rounded-full bg-[#4f0f87]"></div>
-          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-        </div>
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold mb-6 text-left">Có thể mua ngay</h2>
+        <h2 className="text-2xl font-bold mb-6">Có thể mua ngay</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {mustBuyBooks.map((book, index) => (
+          {mustBuyBooks.map((book, idx) => (
             <BookCard
-              key={book._id || book.id || index}
+              key={book._id || book.id || idx}
               book={book}
               onAddToCart={handleAddToCart}
             />
           ))}
-        </div>
-        <div className="flex justify-center space-x-2 mt-6">
-          <div className="w-2 h-2 rounded-full bg-[#4f0f87]"></div>
-          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-        </div>
-      </section>
-
-      <section>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-          <div>
-            <h2 className="text-2xl font-bold mb-4">
-              Bạn có biết về chúng tôi không?
-            </h2>
-            <p className="text-gray-600 mb-4 leading-relaxed">
-              Chúng tôi là Bookworld - chuyên về sách trực tuyến và mục tiêu của
-              chúng tôi là mang đến những cuốn sách có thể thay đổi cuộc sống
-              của bạn hoặc đưa bạn thoát khỏi thế giới thực để bước vào một thế
-              giới tuyệt vời hơn. Bookworld tự hào được hợp tác với những nhà
-              xuất bản nổi tiếng nhất để mang lại trải nghiệm tốt nhất cho bạn.
-              <br />
-              <br />
-              Nếu bạn yêu thích sách, hãy đăng ký nhận bản tin của chúng tôi!
-            </p>
-            <div className="space-y-4">
-              <input
-                type="email"
-                placeholder="Nhập email của bạn"
-                className="w-full bg-white border border-gray-400 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#51348f] focus:border-transparent"
-              />
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert("Cảm ơn bạn đã đăng ký!");
-                }}
-                className="w-full bg-[#4f0f87] hover:bg-[#51348f] text-white py-3 rounded transition-colors duration-200 shadow-md hover:shadow-lg"
-              >
-                Đăng ký
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <a
-              href="https://facebook.com/bookworld"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-3 bg-[#1877F2] text-white px-6 py-3 rounded-lg hover:bg-[#1864D6] transition-all duration-200 shadow-md hover:shadow-lg w-full justify-center"
-            >
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z" />
-              </svg>
-              <span className="font-medium">Theo dõi Fanpage BookWorld</span>
-            </a>
-
-            <div className="w-full bg-gray-100 p-4 rounded-lg text-center">
-              <p className="text-sm text-gray-600">
-                Fanpage:{" "}
-                <span className="font-semibold">BookWorld - Thế Giới Sách</span>
-                <br />
-                Nhấn vào nút để truy cập Facebook và tham gia cộng đồng của
-                chúng tôi.
-              </p>
-            </div>
-          </div>
         </div>
       </section>
     </div>

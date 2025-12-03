@@ -7,19 +7,10 @@ const Header = () => {
   const [openUserMenu, setOpenUserMenu] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
 
-  // ← THAY ĐỔI: Dùng useAuth thay vì state riêng
   const { user, isAuthenticated, logout } = useAuth();
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
-
-  // ← XÓA useEffect load user - không cần nữa vì AuthContext tự động xử lý
-  // useEffect(() => {
-  //   const loadUser = () => { ... };
-  //   loadUser();
-  //   window.addEventListener("userLogin", loadUser);
-  //   return () => window.removeEventListener("userLogin", loadUser);
-  // }, []);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -56,7 +47,6 @@ const Header = () => {
     fetchCategories();
   }, []);
 
-  // ← THAY ĐỔI: Dùng logout từ AuthContext
   const handleLogout = () => {
     if (window.confirm("Bạn có chắc muốn đăng xuất?")) {
       logout(); // AuthContext tự động xóa token, user và update state
@@ -137,7 +127,7 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
             <i className="fas fa-heart"></i>
           </a>
 
-          {/* MENU NGƯỜI DÙNG - THAY ĐỔI PHẦN NÀY */}
+          {/* MENU NGƯỜI DÙNG  */}
           <div className="relative" ref={userMenuRef}>
             {isAuthenticated ? (
               // ==== KHI ĐĂNG NHẬP ====
