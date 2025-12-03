@@ -1,57 +1,43 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios, { AxiosResponse } from 'axios';
-
-interface LoginResponse {
-  token: string;
-  user?: any;
-  message?: string;
-}
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  // Sử dụng AuthContext thay vì tự xử lý
+  const { login } = useAuth();
+
   const handleLogin = async () => {
-  setError('');
-  setLoading(true);
+    setError("");
+    setLoading(true);
 
-  try {
-    const response = await axios.post('http://localhost:5004/api/auth/login', {
-      email,
-      password
-    });
+    try {
+      // Gọi login từ AuthContext - nó đã xử lý hết
+      await login(email, password);
 
-    // Lưu token + user
-    if (response.data.token) {
-
-      // Lưu token
-      localStorage.setItem('token', response.data.token);
-
-      // Lưu user
-      if (response.data.user) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-      }
-
-      // Bắn event cho Header cập nhật
-      window.dispatchEvent(new Event("userLogin"));
-
-      alert('Đăng nhập thành công!');
-      navigate('/'); 
+      // Nếu thành công, tự động navigate
+      alert("Đăng nhập thành công!");
+      navigate("/");
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || "Đăng nhập thất bại!";
+      setError(errorMsg);
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-  } catch (err: any) {
-    const errorMsg = err.response?.data?.message || 'Đăng nhập thất bại!';
-    setError(errorMsg);
-    console.error('Login error:', err);
-
-  } finally {
-    setLoading(false);
-  }
-};
+  // Handle Enter key press
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleLogin();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-12 px-4">
@@ -64,7 +50,9 @@ const LoginPage: React.FC = () => {
 
         {/* Social Login */}
         <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-          <h2 className="text-lg font-semibold text-center mb-6 text-gray-700">Đăng nhập bằng</h2>
+          <h2 className="text-lg font-semibold text-center mb-6 text-gray-700">
+            Đăng nhập bằng
+          </h2>
           <div className="space-y-3">
             <button className="w-full flex items-center justify-center gap-3 bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 font-semibold transition shadow-md">
               <i className="fab fa-facebook-f"></i>
@@ -86,8 +74,10 @@ const LoginPage: React.FC = () => {
 
         {/* Login Form */}
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">Đăng nhập với Email</h2>
-          
+          <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">
+            Đăng nhập với Email
+          </h2>
+
           {/* Error Message */}
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
@@ -108,6 +98,7 @@ const LoginPage: React.FC = () => {
                 placeholder="Email của bạn"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
@@ -124,6 +115,7 @@ const LoginPage: React.FC = () => {
                 placeholder="Nhập mật khẩu"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
@@ -137,25 +129,31 @@ const LoginPage: React.FC = () => {
                 />
                 <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
               </label>
-              <a href="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 underline">
+              <a
+                href="/forgot-password"
+                className="text-sm text-purple-600 hover:text-purple-700 underline"
+              >
                 Quên mật khẩu?
               </a>
             </div>
 
             {/* Submit Button */}
-            <button 
+            <button
               onClick={handleLogin}
               disabled={loading}
               className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 font-semibold transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {loading ? 'Đang đăng nhập...' : 'Đăng Nhập'}
+              {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
             </button>
 
             {/* Register Link */}
             <div className="text-center pt-4">
               <p className="text-gray-600">
-                Chưa có tài khoản?{' '}
-                <a href="/register" className="text-purple-600 hover:text-purple-700 font-semibold underline">
+                Chưa có tài khoản?{" "}
+                <a
+                  href="/register"
+                  className="text-purple-600 hover:text-purple-700 font-semibold underline"
+                >
                   Đăng ký ngay
                 </a>
               </p>

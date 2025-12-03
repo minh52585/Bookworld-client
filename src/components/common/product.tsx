@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import LoginModal from "../../pages/Auth/LoginModal";
 
 type Book = {
   _id?: string;
@@ -42,7 +44,7 @@ const BookCard = ({
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Ngăn không cho trigger handleCardClick
+    e.stopPropagation();
     onAddToCart(book);
   };
 
@@ -82,14 +84,16 @@ const BookCarousel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCartNotification, setShowCartNotification] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [pendingBook, setPendingBook] = useState<Book | null>(null);
+
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
         setError(null);
-
-        console.log("Đang gọi API:", `${API_BASE_URL}/products`);
 
         const response = await fetch(`${API_BASE_URL}/products?limit=8`, {
           method: "GET",
@@ -98,8 +102,6 @@ const BookCarousel: React.FC = () => {
           },
         });
 
-        console.log("Response status:", response.status);
-
         if (!response.ok) {
           throw new Error(
             `HTTP Error: ${response.status} - ${response.statusText}`
@@ -107,53 +109,39 @@ const BookCarousel: React.FC = () => {
         }
 
         const data = await response.json();
-        console.log(" Dữ liệu nhận được:", data);
-
         let products: Book[] = [];
 
         if (Array.isArray(data)) {
           products = data;
-          console.log("✓ Data là Array trực tiếp");
         } else if (
           data.data &&
           data.data.items &&
           Array.isArray(data.data.items)
         ) {
           products = data.data.items;
-          console.log("✓ Data có cấu trúc data.items");
         } else if (data.items && Array.isArray(data.items)) {
           products = data.items;
-          console.log('✓ Data có key "items"');
         } else if (data.products && Array.isArray(data.products)) {
           products = data.products;
-          console.log('✓ Data có key "products"');
         } else if (data.data && Array.isArray(data.data)) {
           products = data.data;
-          console.log('✓ Data có key "data"');
         } else if (data.result && Array.isArray(data.result)) {
           products = data.result;
-          console.log('✓ Data có key "result"');
-        } else {
-          console.error("Không tìm thấy array sản phẩm. Cấu trúc data:", data);
         }
-
-        console.log("📦 Số sản phẩm:", products.length);
 
         if (products.length > 0) {
           setSelectedBooks(products.slice(0, 4));
           setMustBuyBooks(products.slice(4, 8));
-          console.log("Đã load sản phẩm thành công!");
         } else {
           throw new Error("Không có sản phẩm nào từ API");
         }
       } catch (err) {
         console.error("Lỗi khi gọi API:", err);
-
         const errorMessage =
           err instanceof Error ? err.message : "Không thể kết nối đến server";
         setError(errorMessage);
 
-        // Hiển thị dữ liệu mẫu khi có lỗi
+        // Dữ liệu mẫu khi có lỗi
         setSelectedBooks([
           {
             _id: "1",
@@ -231,34 +219,43 @@ const BookCarousel: React.FC = () => {
   }, []);
 
   const handleAddToCart = (book: Book) => {
-    // Lấy giỏ hàng hiện tại từ localStorage
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    // Kiểm tra đăng nhập
+    if (!isAuthenticated) {
+      setPendingBook(book);
+      setShowLoginModal(true);
+      return;
+    }
 
-    // Kiểm tra sản phẩm đã có trong giỏ chưa
+    addToCartHandler(book);
+  };
+
+  const addToCartHandler = (book: Book) => {
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const existingItemIndex = cart.findIndex(
       (item: any) => (item._id || item.id) === (book._id || book.id)
     );
 
     if (existingItemIndex > -1) {
-      // Nếu đã có, tăng số lượng
       cart[existingItemIndex].quantity =
         (cart[existingItemIndex].quantity || 1) + 1;
     } else {
-      // Nếu chưa có, thêm mới với quantity = 1
       cart.push({
         ...book,
         quantity: 1,
       });
     }
 
-    // Lưu lại vào localStorage
     localStorage.setItem("cart", JSON.stringify(cart));
 
-    // Hiển thị thông báo
     setShowCartNotification(true);
     setTimeout(() => setShowCartNotification(false), 3000);
+  };
 
-    console.log(" Đã thêm vào giỏ hàng:", book);
+  const handleLoginSuccess = () => {
+    if (pendingBook) {
+      addToCartHandler(pendingBook);
+      setPendingBook(null);
+    }
   };
 
   if (loading) {
@@ -274,7 +271,12 @@ const BookCarousel: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto py-10 px-4 space-y-16">
-      {/* Notification */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
       {showCartNotification && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in-down">
           <div className="flex items-center space-x-2">

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
+import LoginModal from "./Auth/LoginModal";
 
 interface Product {
   _id: string;
@@ -30,6 +32,10 @@ const BookDetailPage: React.FC = () => {
   const [loadingRelated, setLoadingRelated] = useState(true);
   const [lastViewed, setLastViewed] = useState<Product[]>([]);
   const [loadingLastViewed, setLoadingLastViewed] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showCartNotification, setShowCartNotification] = useState(false);
+
+  const { isAuthenticated } = useAuth();
 
   // Fetch main product
   useEffect(() => {
@@ -50,71 +56,33 @@ const BookDetailPage: React.FC = () => {
   useEffect(() => {
     const getRelated = async () => {
       try {
-        console.log(
-          "Đang gọi API related:",
-          `http://localhost:5004/api/products/${id}/related`
-        );
         const res = await axios.get(
           `http://localhost:5004/api/products/${id}/related`
         );
 
-        console.log("Response từ related API:", res.data);
-        console.log("Response status:", res.status);
-
-        // Xử lý cấu trúc response
         let products: Product[] = [];
         const data = res.data;
 
-        console.log("Kiểm tra cấu trúc data:", {
-          isArray: Array.isArray(data),
-          hasData: !!data.data,
-          hasDataItems: !!(data.data && data.data.items),
-          keys: Object.keys(data),
-        });
-
         if (Array.isArray(data)) {
           products = data;
-          console.log(
-            "✓ Data là Array trực tiếp, có",
-            products.length,
-            "sản phẩm"
-          );
         } else if (data.data && Array.isArray(data.data)) {
           products = data.data;
-          console.log('✓ Data có key "data", có', products.length, "sản phẩm");
         } else if (
           data.data &&
           data.data.items &&
           Array.isArray(data.data.items)
         ) {
           products = data.data.items;
-          console.log(
-            "✓ Data có cấu trúc data.items, có",
-            products.length,
-            "sản phẩm"
-          );
         } else if (
           data.relatedProducts &&
           Array.isArray(data.relatedProducts)
         ) {
           products = data.relatedProducts;
-          console.log(
-            '✓ Data có key "relatedProducts", có',
-            products.length,
-            "sản phẩm"
-          );
-        } else {
-          console.error("Không tìm thấy array sản phẩm trong response");
         }
 
-        console.log("Tổng số sản phẩm related:", products.length);
-        setRelatedProducts(products.slice(0, 8)); // Lấy tối đa 8 sản phẩm
+        setRelatedProducts(products.slice(0, 8));
       } catch (err) {
         console.error("Error fetching related products:", err);
-        if (axios.isAxiosError(err)) {
-          console.error("Response data:", err.response?.data);
-          console.error("Status code:", err.response?.status);
-        }
         setRelatedProducts([]);
       } finally {
         setLoadingRelated(false);
@@ -127,65 +95,39 @@ const BookDetailPage: React.FC = () => {
   useEffect(() => {
     const fetchLastViewed = async () => {
       try {
-        console.log(" Đang fetch last viewed...");
-
-        // Lấy danh sách ID từ localStorage
         const viewedIds = JSON.parse(
           localStorage.getItem("lastViewed") || "[]"
         );
-        console.log("IDs từ localStorage:", viewedIds);
 
         if (viewedIds.length > 0) {
-          console.log("✓ Có lịch sử xem, đang fetch chi tiết...");
-
-          // Fetch thông tin chi tiết của từng sản phẩm
           const promises = viewedIds.slice(0, 4).map((productId: string) =>
             axios
               .get(`http://localhost:5004/api/products/${productId}`)
-              .then((res) => {
-                console.log(`Fetched product ${productId}:`, res.data);
-                return res.data.data;
-              })
-              .catch((err) => {
-                console.error(`Error fetching product ${productId}:`, err);
-                return null;
-              })
+              .then((res) => res.data.data)
+              .catch(() => null)
           );
 
           const products = await Promise.all(promises);
           const validProducts = products.filter((p) => p !== null);
-          console.log("📦 Valid products:", validProducts.length);
           setLastViewed(validProducts);
         } else {
-          console.log("⚠️ Chưa có lịch sử, lấy sản phẩm mới nhất...");
-
-          // Nếu chưa có lịch sử, lấy sản phẩm mới nhất
           const res = await axios.get(
             "http://localhost:5004/api/products?limit=4"
           );
-          console.log("✅ Response từ products API:", res.data);
 
           let products: Product[] = [];
           if (res.data.data && res.data.data.items) {
             products = res.data.data.items;
-            console.log("✓ Lấy từ data.data.items:", products.length);
           } else if (Array.isArray(res.data.data)) {
             products = res.data.data;
-            console.log("✓ Lấy từ data.data:", products.length);
           } else if (Array.isArray(res.data)) {
             products = res.data;
-            console.log("✓ Lấy từ data trực tiếp:", products.length);
           }
 
-          console.log("Products cho last viewed:", products.length);
           setLastViewed(products);
         }
       } catch (err) {
         console.error("Error fetching last viewed:", err);
-        if (axios.isAxiosError(err)) {
-          console.error("Response data:", err.response?.data);
-          console.error("Status code:", err.response?.status);
-        }
         setLastViewed([]);
       } finally {
         setLoadingLastViewed(false);
@@ -199,13 +141,10 @@ const BookDetailPage: React.FC = () => {
   useEffect(() => {
     if (product && id) {
       const viewedIds = JSON.parse(localStorage.getItem("lastViewed") || "[]");
-
-      // Thêm ID hiện tại vào đầu danh sách, loại bỏ duplicate
       const newViewed = [
         id,
         ...viewedIds.filter((vid: string) => vid !== id),
-      ].slice(0, 10); // Giữ tối đa 10 sản phẩm
-
+      ].slice(0, 10);
       localStorage.setItem("lastViewed", JSON.stringify(newViewed));
     }
   }, [product, id]);
@@ -221,12 +160,38 @@ const BookDetailPage: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  // Helper function để lấy tên sản phẩm
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (!product) return;
+
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const existingItemIndex = cart.findIndex(
+      (item: any) => item._id === product._id
+    );
+
+    if (existingItemIndex > -1) {
+      cart[existingItemIndex].quantity += quantity;
+    } else {
+      cart.push({
+        ...product,
+        quantity: quantity,
+      });
+    }
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+
+    setShowCartNotification(true);
+    setTimeout(() => setShowCartNotification(false), 3000);
+  };
+
   const getProductName = (product: Product) => {
     return product.title || product.name || "Sản phẩm";
   };
 
-  // Helper function để lấy ảnh sản phẩm
   const getProductImage = (product: Product) => {
     return product.image || product.images?.[0] || "/placeholder.jpg";
   };
@@ -238,6 +203,32 @@ const BookDetailPage: React.FC = () => {
 
   return (
     <div className="bg-gray-50">
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
+
+      {showCartNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
+          <div className="flex items-center space-x-2">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            <span>Đã thêm vào giỏ hàng!</span>
+          </div>
+        </div>
+      )}
+
       {/* Product Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-12 gap-8">
@@ -323,7 +314,10 @@ const BookDetailPage: React.FC = () => {
             </div>
 
             <div className="flex space-x-4 mb-8">
-              <button className="flex-1 bg-purple-600 text-white px-8 py-3 rounded-md hover:bg-purple-700 font-semibold">
+              <button
+                onClick={handleAddToCart}
+                className="flex-1 bg-purple-600 text-white px-8 py-3 rounded-md hover:bg-purple-700 font-semibold"
+              >
                 Thêm vào giỏ hàng
               </button>
               <button className="px-8 py-3 border border-gray-300 rounded-md hover:border-purple-600 hover:text-purple-600">
@@ -424,7 +418,6 @@ const BookDetailPage: React.FC = () => {
                       className="text-gray-400 hover:text-purple-600"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Add to favorites logic
                       }}
                     >
                       <i className="far fa-heart"></i>
@@ -434,7 +427,11 @@ const BookDetailPage: React.FC = () => {
                     className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Add to cart logic
+                      if (!isAuthenticated) {
+                        setShowLoginModal(true);
+                      } else {
+                        handleAddToCart();
+                      }
                     }}
                   >
                     <i className="fas fa-shopping-cart mr-2"></i>Thêm vào giỏ

@@ -1,26 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../../contexts/AuthContext";
 
 const Header = () => {
   const [openUserMenu, setOpenUserMenu] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
+
+  // ← THAY ĐỔI: Dùng useAuth thay vì state riêng
+  const { user, isAuthenticated, logout } = useAuth();
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
 
-  useEffect(() => {
-    const loadUser = () => {
-      const storedUser = localStorage.getItem("user");
-      setUser(storedUser ? JSON.parse(storedUser) : null);
-    };
-
-    loadUser();
-    window.addEventListener("userLogin", loadUser);
-
-    return () => window.removeEventListener("userLogin", loadUser);
-  }, []);
+  // ← XÓA useEffect load user - không cần nữa vì AuthContext tự động xử lý
+  // useEffect(() => {
+  //   const loadUser = () => { ... };
+  //   loadUser();
+  //   window.addEventListener("userLogin", loadUser);
+  //   return () => window.removeEventListener("userLogin", loadUser);
+  // }, []);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -57,12 +56,28 @@ const Header = () => {
     fetchCategories();
   }, []);
 
+  // ← THAY ĐỔI: Dùng logout từ AuthContext
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
-    setUser(null);
-    nav("/login");
+    if (window.confirm("Bạn có chắc muốn đăng xuất?")) {
+      logout(); // AuthContext tự động xóa token, user và update state
+      nav("/");
+    }
   };
+
+  // Đóng menu khi click bên ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
+        setOpenUserMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="text-sm font-sans">
@@ -122,19 +137,26 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
             <i className="fas fa-heart"></i>
           </a>
 
-          {/* MENU NGƯỜI DÙNG */}
-          {/* USER DROPDOWN */}
+          {/* MENU NGƯỜI DÙNG - THAY ĐỔI PHẦN NÀY */}
           <div className="relative" ref={userMenuRef}>
-            {user ? (
+            {isAuthenticated ? (
               // ==== KHI ĐĂNG NHẬP ====
-              <div className="flex items-center space-x-2 text-purple-700">
-                <span>
-                  Xin chào, <b>{user.fullname || user.email}</b>
+              <div className="flex items-center space-x-3">
+                <span className="text-gray-700">
+                  Xin chào,{" "}
+                  <b className="text-purple-700">{user?.name || user?.email}</b>
                 </span>
+
+                {/* Badge Admin nếu là admin */}
+                {user?.role === "admin" && (
+                  <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded font-semibold">
+                    ADMIN
+                  </span>
+                )}
 
                 <button
                   onClick={handleLogout}
-                  className="text-red-600 hover:underline text-sm"
+                  className="text-red-600 hover:text-red-700 hover:underline text-sm font-medium"
                 >
                   Đăng xuất
                 </button>
@@ -154,12 +176,14 @@ focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
                     <Link
                       to="/login"
                       className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
+                      onClick={() => setOpenUserMenu(false)}
                     >
                       Đăng nhập
                     </Link>
                     <Link
                       to="/register"
                       className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
+                      onClick={() => setOpenUserMenu(false)}
                     >
                       Đăng ký
                     </Link>
