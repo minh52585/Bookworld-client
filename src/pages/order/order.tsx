@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../../contexts/AuthContext";
 import { Package, Eye } from "lucide-react";
-
+import { useNavigate } from "react-router-dom";
+import LoginModal from "../../pages/Auth/LoginModal";
 const API_BASE_URL = "http://localhost:5004/api";
 
 // Định nghĩa trạng thái đơn hàng
@@ -15,16 +16,21 @@ const ORDER_STATUS = {
 };
 
 function OrderList() {
-  const { isAuthenticated } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated) {
+      if (!isAuthenticated) {
+        setShowLoginModal(true);
+        return;
+      }
       fetchOrders();
-    }
-  }, [isAuthenticated]);
+    }, [isAuthenticated]);
+  
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -53,13 +59,29 @@ function OrderList() {
     );
   };
 
-  if (loading) {
+  const handleCloseLoginModal = () => {
+    setShowLoginModal(false);
+    navigate("/");
+  };
+
+  if (!isAuthenticated) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-xl text-gray-600">Đang tải...</div>
-      </div>
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={handleCloseLoginModal}
+        onLoginSuccess={OrderList}
+      />
     );
   }
+
+
+  // if (loading) {
+  //   return (
+  //     <div className="flex justify-center items-center min-h-screen">
+  //       <div className="text-xl text-gray-600">Đang tải...</div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
