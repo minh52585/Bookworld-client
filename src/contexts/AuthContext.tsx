@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         "http://localhost:5004/api/auth/login",
         {
           email,
-          password,
+          password
         }
       );
 

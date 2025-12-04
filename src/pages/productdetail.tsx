@@ -18,7 +18,7 @@ interface Product {
   description: string;
   images?: string[];
   image?: string;
-  stock?: number;
+  quantity?: number;
   publisher?: string;
 }
 
@@ -122,7 +122,11 @@ const BookDetailPage: React.FC = () => {
   const handleDecrement = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
-  const handleIncrement = () => setQuantity(quantity + 1);
+  const handleIncrement = () => {
+  if (product?.quantity && quantity < product.quantity) {
+    setQuantity(quantity + 1);
+  }
+};
 
   // Product click handler
   const handleProductClick = (productId: string) => {
@@ -252,9 +256,9 @@ const BookDetailPage: React.FC = () => {
                 <strong>Nhà xuất bản:</strong> {product.publisher}
               </p>
             )}
-            {product.stock !== undefined && (
+            {product.quantity !== undefined && (
               <p className="text-sm text-gray-600 mb-4">
-                <strong>Còn lại:</strong> {product.stock} cuốn
+                <strong>Còn lại:</strong> {product.quantity} cuốn
               </p>
             )}
 
@@ -269,7 +273,12 @@ const BookDetailPage: React.FC = () => {
               <span className="text-xl font-semibold">{quantity}</span>
               <button
                 onClick={handleIncrement}
-                className="w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center hover:border-purple-600"
+                disabled={product?.quantity !== undefined && quantity >= product.quantity}
+                className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
+                  ${product?.quantity !== undefined && quantity >= product.quantity 
+                    ? "opacity-50 cursor-not-allowed" 
+                    : "hover:border-purple-600"}
+                `}
               >
                 <i className="fas fa-plus text-gray-600"></i>
               </button>
