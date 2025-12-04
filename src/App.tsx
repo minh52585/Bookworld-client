@@ -7,7 +7,9 @@ import { AuthProvider } from "./contexts/AuthContext";
 function App() {
   const { count: countFromStore } = useCountStore();
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    console.log("Count from store:", countFromStore);
+  }, [countFromStore]);
 
   return (
     <AuthProvider>
