@@ -11,7 +11,6 @@ import OrderList from "../pages/order/order";
 import OrderDetailPage from "../pages/order/orderDetail";
 import ThanhToan from "../components/common/thanhtoan";
 
-
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -57,7 +56,6 @@ export const router = createBrowserRouter([
         path: "thanhtoan",
         element: <ThanhToan />,
       },
-     
     ],
   },
 ]);
