@@ -2,33 +2,38 @@ import React, { useState, useEffect } from "react";
 import { ShoppingCart, Trash } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import LoginModal from "../../pages/Auth/LoginModal";
 import axios from "axios";
 
 const API_BASE_URL = "http://localhost:5004/api";
 
 function Thanhtoan() {
-  const { user, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+ 
 
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
-    province: "",
-    district: "",
-    ward: "",
-    addressDetail: "",
+    addressDetail: ""
   });
 
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
+  useEffect(() => {
+      if (!isAuthenticated) {
+        setShowLoginModal(true);
+        return;
+      }
+      fetchUserInfo();
+      fetchCart();
+    }, [isAuthenticated]);
   // Lấy giỏ hàng từ API
   const fetchCart = async () => {
-    setLoading(true);
     try {
       const res = await axios.get(`${API_BASE_URL}/cart`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -40,14 +45,21 @@ function Thanhtoan() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setShowLoginModal(true);
-      return;
+   const fetchUserInfo = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const userData = res.data.data;
+      setFormData((prev) => ({
+        ...prev,
+        fullName: userData.name || "",
+        email: userData.email || "",
+      }));
+    } catch (err) {
+      console.error("Lỗi lấy thông tin người dùng:", err);
     }
-    fetchCart();
-  }, [isAuthenticated]);
-
+  };
   // Xử lý input form
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -66,6 +78,20 @@ function Thanhtoan() {
   );
   const phiShip = 30000;
 
+  const handleCloseLoginModal = () => {
+    setShowLoginModal(false);
+    navigate("/");
+  };
+
+  if (!isAuthenticated) {
+        return (
+          <LoginModal
+            isOpen={showLoginModal}
+            onClose={handleCloseLoginModal}
+            onLoginSuccess={Thanhtoan}
+          />
+        );
+      }
 
   return (
     <div className="bg-gradient-to-br from-purple-50 to-pink-50 py-8 px-4">
@@ -108,41 +134,6 @@ function Thanhtoan() {
             />
           </div>
 
-          <div className="mb-4">
-            <label className="font-medium">Tỉnh / Thành phố *</label>
-            <select
-              name="province"
-              value={formData.province}
-              onChange={handleChange}
-              className="w-full p-3 mt-2 border rounded-lg bg-gray-50"
-            >
-              <option value="">-- Chọn tỉnh/thành --</option>
-            </select>
-          </div>
-
-          <div className="mb-4">
-            <label className="font-medium">Quận / Huyện *</label>
-            <select
-              name="district"
-              value={formData.district}
-              onChange={handleChange}
-              className="w-full p-3 mt-2 border rounded-lg bg-gray-50"
-            >
-              <option value="">-- Chọn quận/huyện --</option>
-            </select>
-          </div>
-
-          <div className="mb-4">
-            <label className="font-medium">Phường / Xã *</label>
-            <select
-              name="ward"
-              value={formData.ward}
-              onChange={handleChange}
-              className="w-full p-3 mt-2 border rounded-lg bg-gray-50"
-            >
-              <option value="">-- Chọn phường/xã --</option>
-            </select>
-          </div>
 
           <div className="mb-4">
             <label className="font-medium">Địa chỉ nhận hàng *</label>
