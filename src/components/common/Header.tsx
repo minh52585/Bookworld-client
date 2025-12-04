@@ -78,14 +78,9 @@ const fetchSearch = async (text: string) => {
 
   searchTimeout = setTimeout(async () => {
     try {
-      // 1) Lấy ALL products
       const res = await axios.get(`${API_BASE_URL}/products`);
       const all = res.data?.data || [];
-
-      // 2) Chuẩn hóa từ khóa
       const q = removeVietnameseTones(text.toLowerCase().trim());
-
-      // 3) Lọc realtime theo title bỏ dấu tiếng Việt
       const filtered = all.filter((p: any) =>
         removeVietnameseTones(p.title.toLowerCase()).includes(q)
       );
@@ -100,8 +95,6 @@ const fetchSearch = async (text: string) => {
   }, 300);
 };
 
-
-  // Enter → điều hướng sang trang kết quả
   const handleSearchSubmit = (e: any) => {
     e.preventDefault();
     if (!searchText.trim()) return;
@@ -109,10 +102,6 @@ const fetchSearch = async (text: string) => {
     nav(`/search?query=${searchText}`);
     setShowDropdown(false);
   };
-
-  // ====================================================
-  // LOGOUT
-  // ====================================================
   const handleLogout = () => {
     if (window.confirm("Bạn có chắc muốn đăng xuất?")) {
       logout();
@@ -120,9 +109,6 @@ const fetchSearch = async (text: string) => {
     }
   };
 
-  // ====================================================
-  // ĐÓNG MENU USER
-  // ====================================================
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -139,7 +125,7 @@ const fetchSearch = async (text: string) => {
 
   return (
     <div className="text-sm font-sans">
-      {/* ================= TOP HEADER ================= */}
+      {/* header*/}
       <div className="flex items-center justify-between px-6 py-2 border-b bg-white">
         <div className="flex items-center space-x-3">
           <Link to="/" className="font-bold text-lg text-gray-800">
@@ -148,7 +134,7 @@ const fetchSearch = async (text: string) => {
           <span className="text-gray-400">Chúng tôi yêu sách</span>
         </div>
 
-        {/* ================= SEARCH ================= */}
+        {/* search */}
         <form className="relative w-64" onSubmit={handleSearchSubmit}>
           <input
             type="text"
@@ -167,8 +153,6 @@ const fetchSearch = async (text: string) => {
               <i className="fas fa-search text-gray-600"></i>
             )}
           </div>
-
-          {/* ================= DROPDOWN ================= */}
           {showDropdown && (
             <div className="absolute top-full left-0 w-full bg-white border rounded shadow-lg z-50 mt-2 max-h-72 overflow-y-auto">
               {searchResults.length > 0 ? (
@@ -203,7 +187,7 @@ const fetchSearch = async (text: string) => {
           )}
         </form>
 
-        {/* ================= RIGHT MENU ================= */}
+        {/* right menu */}
         <div className="flex items-center space-x-6 text-gray-600 relative">
           <a href="#" className="hover:text-purple-600">Chính sách bảo mật</a>
           <a href="#" className="hover:text-purple-600">Bảo hành</a>
@@ -217,8 +201,6 @@ const fetchSearch = async (text: string) => {
           <a href="#" className="text-purple-600 text-xl hover:text-purple-700">
             <i className="fas fa-heart"></i>
           </a>
-
-          {/* USER MENU */}
           <div className="relative" ref={userMenuRef}>
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">
@@ -272,10 +254,8 @@ const fetchSearch = async (text: string) => {
         </div>
       </div>
 
-      {/* ================= NAV BOTTOM ================= */}
       <div className="flex items-center justify-between px-6 py-3 border-b-2 border-purple-200 bg-white">
         <div className="flex items-center space-x-6 text-gray-700">
-          {/* CATEGORY MENU */}
           <div className="relative group">
             <span className="hover:text-purple-600 cursor-pointer">Sách nên đọc</span>
 

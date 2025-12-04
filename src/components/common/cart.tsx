@@ -61,7 +61,7 @@ function Cart() {
     const item = cartItems.find((i: any) => i.product_id?._id === productId);
     if (!item) return;
     const newQty = item.quantity - 1;
-    if (newQty < 1) return; // Không giảm dưới 1
+    if (newQty < 1) return;
 
     try {
       await axios.put(
@@ -94,6 +94,10 @@ function Cart() {
     (sum, item: any) => sum + item.product_id.price * item.quantity,
     0
   );
+
+  const handleCheckout = () => {
+    navigate("/thanhtoan");
+  };
 
   const handleCloseLoginModal = () => {
     setShowLoginModal(false);
@@ -155,7 +159,6 @@ function Cart() {
 
                   return (
                     <tr key={id} className="border-b hover:bg-gray-50">
-                      {/* Ảnh */}
                       <td className="p-3 flex ">
                         <img
                           src={product.images?.[0]}
@@ -164,17 +167,14 @@ function Cart() {
                         />
                       </td>
 
-                      {/* Tên */}
                       <td className="p-3 text-center font-semibold">
                         {product.name}
                       </td>
 
-                      {/* Giá */}
                       <td className="p-3 text-center text-purple-700 font-semibold">
                         {product.price.toLocaleString()} đ
                       </td>
 
-                      {/* Số lượng */}
                       <td className="p-3 text-center">
                         <div className="flex justify-center items-center space-x-2 w-max mx-auto px-2 py-1 rounded">
                           <button
@@ -195,12 +195,10 @@ function Cart() {
                         </div>
                       </td>
 
-                      {/* Tổng */}
                       <td className="p-3 text-center font-semibold">
                         {(product.price * item.quantity).toLocaleString()} đ
                       </td>
 
-                      {/* Xóa */}
                       <td className="p-3 text-center">
                         <button
                           onClick={() => removeItem(id)}
@@ -226,7 +224,10 @@ function Cart() {
                   <span>{total.toLocaleString()} đ</span>
                 </div>
 
-                <button className="bg-purple-600 text-white w-full py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition">
+                <button
+                  onClick={handleCheckout}
+                  className="bg-purple-600 text-white w-full py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition"
+                >
                   Thanh Toán
                 </button>
               </div>

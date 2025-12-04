@@ -9,7 +9,7 @@ import Register from "../pages/Auth/Register";
 import ForgotPassword from "../pages/Auth/ForgotPassword";
 import OrderList from "../pages/order/order";
 import OrderDetailPage from "../pages/order/orderDetail";
-import SearchPage from "../pages/SearchPage";  // <-- thêm dòng này
+import SearchPage from "../pages/SearchPage";   // <-- giữ lại dòng này
 
 export const router = createBrowserRouter([
   {
