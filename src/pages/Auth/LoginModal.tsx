@@ -1,22 +1,19 @@
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { Link } from "react-router-dom";
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess?: () => void; // thêm prop callback
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({
-  isOpen,
-  onClose,
-  onLoginSuccess,
-}) => {
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   if (!isOpen) return null;
 
@@ -24,11 +21,15 @@ const LoginModal: React.FC<LoginModalProps> = ({
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess(false);
 
     try {
-      await login(email, password); // Context sẽ set user/token
-      if (onLoginSuccess) onLoginSuccess(); // gọi callback khi login thành công
-      onClose(); // Đóng modal
+      await login(email, password);
+      setSuccess(true);
+
+      setTimeout(() => {
+        onClose();
+      }, 500);
     } catch (err: any) {
       setError(err.response?.data?.message || "Đăng nhập thất bại");
     } finally {
@@ -42,6 +43,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
           Đăng Nhập
         </h2>
+
         <p className="text-center text-gray-500 mb-6">
           Bạn cần đăng nhập để tiếp tục
         </p>
@@ -49,6 +51,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
         {error && (
           <div className="p-3 mb-4 bg-red-100 text-red-700 border border-red-300 rounded">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="p-3 mb-4 bg-green-100 text-green-700 border border-green-300 rounded">
+            Đăng nhập thành công!
           </div>
         )}
 
@@ -89,6 +97,17 @@ const LoginModal: React.FC<LoginModalProps> = ({
             {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
+
+        <div className="text-center mt-4 text-sm text-gray-600">
+          Chưa có tài khoản?{" "}
+          <Link
+            to="/register"
+            className="text-purple-600 hover:text-purple-700 underline font-semibold"
+            onClick={onClose}
+          >
+            Đăng ký ngay
+          </Link>
+        </div>
 
         <button
           onClick={onClose}
