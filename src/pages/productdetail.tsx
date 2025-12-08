@@ -8,17 +8,14 @@ import { API_BASE_URL } from "../configs/api";
 interface Product {
   _id: string;
   name?: string;
-  title?: string;
+  nhaxuatban: string;
+  namxuatban: number;
+  sotrang: number;
   author: string;
-  originalPrice?: number;
-  discount?: number;
-  rating?: number;
-  totalReviews?: number;
   description: string;
   images?: string[];
   image?: string;
   quantity?: number;
-  publisher?: string;
 }
 
 const BookDetailPage: React.FC = () => {
@@ -27,6 +24,8 @@ const BookDetailPage: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [variants, setVariants] = useState<any[]>([]);
+  const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
   const [error, setError] = useState("");
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
@@ -35,7 +34,7 @@ const BookDetailPage: React.FC = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCartNotification, setShowCartNotification] = useState(false);
   const [loginMessage, setLoginMessage] = useState<string | null>(null);
-
+  
   const { isAuthenticated } = useAuth();
 
   // Fetch main product
@@ -43,7 +42,8 @@ const BookDetailPage: React.FC = () => {
     const fetchProduct = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/products/${id}`);
-        setProduct(res.data.data);
+        setProduct(res.data.data.product || null);
+        setVariants(res.data.data.variant || []);
       } catch (err) {
         setError("Không tìm thấy sản phẩm!");
       } finally {
@@ -122,10 +122,12 @@ const BookDetailPage: React.FC = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
   const handleIncrement = () => {
-  if (product?.quantity && quantity < product.quantity) {
+  if (selectedVariant?.quantity && quantity < selectedVariant.quantity) {
     setQuantity(quantity + 1);
   }
 };
+
+
 
   // Product click handler
   const handleProductClick = (productId: string) => {
@@ -144,7 +146,11 @@ const BookDetailPage: React.FC = () => {
     try {
       await axios.post(
         `${API_BASE_URL}/cart/items`,
-        { product_id: product._id, quantity: quantity },
+        { 
+          product_id: product._id,
+          variant_id: selectedVariant._id,
+          quantity: quantity
+        },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -157,7 +163,7 @@ const BookDetailPage: React.FC = () => {
     }
   };
 
-  const getProductName = (p: Product) => p.title || p.name || "Sản phẩm";
+  const getProductName = (p: Product) => p.name || "Sản phẩm";
   const getProductImage = (p: Product) =>
     p.image || p.images?.[0] || "/placeholder.jpg";
 
@@ -242,51 +248,109 @@ const BookDetailPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {getProductName(product)}
             </h1>
-            <p className="text-lg text-gray-700 mb-4">{product.author}</p>
+            <p className="text-lg text-gray-700 mb-4">Tác giả: {product.author}</p>
             <p className="text-gray-700 mb-6 leading-relaxed">
-              {product.description}
+              Mô tả: {product.description}
             </p>
 
-            {product.publisher && (
+            {product.nhaxuatban && (
               <p className="text-sm text-gray-600 mb-2">
-                <strong>Nhà xuất bản:</strong> {product.publisher}
+                <strong>Nhà xuất bản:</strong> {product.nhaxuatban}
               </p>
             )}
-            {product.quantity !== undefined && (
-              <p className="text-sm text-gray-600 mb-4">
-                <strong>Còn lại:</strong> {product.quantity} cuốn
+            {product.namxuatban && (
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>Năm xuất bản:</strong> {product.namxuatban}
               </p>
             )}
+            {product.sotrang && (
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>Số trang:</strong> {product.sotrang}
+              </p>
+            )}
+  
+      
+  
 
-            {/* Quantity */}
-            <div className="flex items-center space-x-4 mb-8">
-              <button
-                onClick={handleDecrement}
-                className="w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center hover:border-purple-600"
-              >
-                <i className="fas fa-minus text-gray-600"></i>
-              </button>
-              <span className="text-xl font-semibold">{quantity}</span>
-              <button
-                onClick={handleIncrement}
-                disabled={product?.quantity !== undefined && quantity >= product.quantity}
-                className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
-                  ${product?.quantity !== undefined && quantity >= product.quantity 
-                    ? "opacity-50 cursor-not-allowed" 
-                    : "hover:border-purple-600"}
-                `}
-              >
-                <i className="fas fa-plus text-gray-600"></i>
-              </button>
+  
+            <div className="mb-6">
+              <p className="font-semibold mb-2">Chọn loại bìa:</p>
+              <div className="flex gap-3 flex-wrap items-center">
+                {variants.map((v) => (
+                  <button
+                    key={v._id}
+                    onClick={() => {
+                      setSelectedVariant(v);
+                      // Reset quantity về 1 nếu vượt quá max của variant
+                      setQuantity(prev => (v.quantity && prev > v.quantity ? v.quantity : 1));
+                    }}
+                    className={`px-4 py-2 border rounded-md font-medium transition
+                      ${selectedVariant?._id === v._id 
+                        ? "border-purple-600 text-purple-600 bg-purple-50"
+                        : "border-gray-300 text-gray-700 hover:border-purple-600 hover:text-purple-600"
+                      }`}
+                  >
+                    {v.type}
+                  </button>
+                ))}
+              </div>
+
+              {/* Giá */}
+              {selectedVariant && (
+                <p className="text-2xl font-bold text-red-600 mt-4 mb-2">
+                  Đơn giá: {selectedVariant.price?.toLocaleString("vi-VN") ?? "0"} đ
+                </p>
+              )}
+
+              {/* Số lượng tồn kho */}
+              {selectedVariant?.quantity !== undefined && (
+                <p className="text-sm text-gray-600 mb-4">
+                  <strong>Còn lại:</strong> {selectedVariant.quantity} cuốn
+                </p>
+              )}
+
+              {/* Quantity selector */}
+              <div className="flex items-center space-x-4 mb-8">
+                <button
+                  onClick={handleDecrement}
+                  disabled={quantity <= 1}
+                  className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
+                    ${quantity <= 1 ? "opacity-50 cursor-not-allowed" : "hover:border-purple-600"}`}
+                >
+                  <i className="fas fa-minus text-gray-600"></i>
+                </button>
+
+                <span className="text-xl font-semibold">{quantity}</span>
+
+                <button
+                  onClick={handleIncrement}
+                  disabled={!selectedVariant || quantity >= (selectedVariant.quantity || 0)}
+                  className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
+                    ${!selectedVariant || quantity >= (selectedVariant.quantity || 0)
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:border-purple-600"}`}
+                >
+                  <i className="fas fa-plus text-gray-600"></i>
+                </button>
+              </div>
             </div>
 
+
             <div className="flex space-x-4 mb-8">
-              <button
+             <button
                 onClick={handleAddToCart}
-                className="flex-1 bg-purple-600 text-white px-8 py-3 rounded-md hover:bg-purple-700 font-semibold"
+                disabled={!selectedVariant}
+                className={`
+                  flex-1 px-8 py-3 rounded-md font-semibold 
+                  ${selectedVariant 
+                    ? "bg-purple-600 text-white hover:bg-purple-700"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }
+                `}
               >
                 Thêm vào giỏ hàng
               </button>
+
               <button className="px-8 py-3 border border-gray-300 rounded-md hover:border-purple-600 hover:text-purple-600">
                 Yêu thích
               </button>
