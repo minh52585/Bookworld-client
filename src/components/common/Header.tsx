@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../../contexts/AuthContext";
+import { API_BASE_URL } from "../../configs/api";
+
+
 
 const Header = () => {
   const [openUserMenu, setOpenUserMenu] = useState(false);
@@ -15,8 +18,6 @@ const Header = () => {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
 
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:5004/api";
 
   let searchTimeout: any;
 // danh muc

@@ -4,7 +4,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { Package, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
-const API_BASE_URL = "http://localhost:5004/api";
+import { API_BASE_URL } from "../../configs/api";
+
 
 // Định nghĩa trạng thái đơn hàng
 const ORDER_STATUS = {

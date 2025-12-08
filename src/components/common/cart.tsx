@@ -4,8 +4,7 @@ import { ShoppingCart } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
-
-const API_BASE_URL = "http://localhost:5004/api";
+import { API_BASE_URL } from "../../configs/api";
 
 function Cart() {
   const { user, isAuthenticated } = useAuth();

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios, { AxiosResponse } from "axios";
+import { API_BASE_URL } from "../../configs/api";
 
 interface RegisterResponse {
   message: string;
@@ -55,7 +56,7 @@ const RegisterPage: React.FC = () => {
 
     try {
       const response: AxiosResponse<RegisterResponse> = await axios.post(
-        "http://localhost:5004/api/auth/register",
+        `${API_BASE_URL}/auth/register`,
         {
           name: formData.name,
           email: formData.email,

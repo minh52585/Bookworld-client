@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import LoginModal from "../../pages/Auth/LoginModal";
+import { API_BASE_URL } from "../../configs/api";
 
 type Book = {
   _id?: string;
@@ -14,8 +15,6 @@ type Book = {
   category?: string;
   description?: string;
 };
-
-const API_BASE_URL = "http://localhost:5004/api";
 
 const BookCard = ({
   book,
@@ -46,6 +45,8 @@ const BookCard = ({
 
   const handleCardClick = () => {
     const id = getBookId();
+    console.log("handleCardClick fired", { id, book });
+
     if (id) {
       navigate(`/products/${id}`);
       window.scrollTo(0, 0);
@@ -75,13 +76,12 @@ const BookCard = ({
       <h3 className="font-semibold text-gray-800 line-clamp-2 mb-2">
         {getBookName()}
       </h3>
-      <p className="text-sm text-gray-600 mb-2">{book.author}</p>
-      <p className="font-bold text-red-500 mb-3">{formatPrice(book.price)} đ</p>
+      <p className="text-sm text-gray-600 mb-2">Tác giả: {book.author}</p>
       <button
-        onClick={handleAddToCartClick}
+        onClick={handleCardClick}
         className="bg-[#4f0f87] hover:bg-[#51348f] text-white py-2 px-3 rounded mt-auto transition-colors duration-200"
       >
-        Thêm vào giỏ hàng
+        Xem chi tiết
       </button>
     </div>
   );

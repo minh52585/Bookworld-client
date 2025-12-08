@@ -1,5 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../configs/api";
+
 
 interface User {
   id: string;
@@ -44,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = async (email: string, password: string) => {
     try {
       const response = await axios.post(
-        "http://localhost:5004/api/auth/login",
+        `${API_BASE_URL}/auth/login`,
         {
           email,
           password

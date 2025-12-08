@@ -10,7 +10,6 @@ interface Product {
   name?: string;
   title?: string;
   author: string;
-  price: number;
   originalPrice?: number;
   discount?: number;
   rating?: number;
@@ -244,9 +243,6 @@ const BookDetailPage: React.FC = () => {
               {getProductName(product)}
             </h1>
             <p className="text-lg text-gray-700 mb-4">{product.author}</p>
-            <div className="text-4xl font-bold text-gray-900 mb-6">
-              {product.price.toLocaleString("vi-VN")} đ
-            </div>
             <p className="text-gray-700 mb-6 leading-relaxed">
               {product.description}
             </p>
@@ -335,9 +331,7 @@ const BookDetailPage: React.FC = () => {
                 </h3>
                 <p className="text-sm text-gray-600 mb-2">{item.author}</p>
                 <p className="text-red-500 font-bold">
-                  {item.price
-                    ? item.price.toLocaleString("vi-VN") + " đ"
-                    : "Liên hệ"}
+                  
                 </p>
               </div>
             ))}
@@ -383,7 +377,7 @@ const BookDetailPage: React.FC = () => {
                   <p className="text-sm text-gray-600 mb-2">{item.author}</p>
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-bold text-red-600">
-                      {item.price.toLocaleString("vi-VN")} đ
+                  
                     </span>
                     <button
                       className="text-gray-400 hover:text-purple-600"

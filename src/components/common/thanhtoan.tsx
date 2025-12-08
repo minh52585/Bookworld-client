@@ -4,8 +4,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
 import axios from "axios";
+import { API_BASE_URL } from "../../configs/api";
 
-const API_BASE_URL = "http://localhost:5004/api";
 
 function Thanhtoan() {
   const [cartItems, setCartItems] = useState<any[]>([]);
