@@ -18,6 +18,10 @@ interface Product {
   quantity?: number;
 }
 
+interface Category {
+  name?: string;
+}
+
 const BookDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -25,6 +29,7 @@ const BookDetailPage: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [variants, setVariants] = useState<any[]>([]);
+  const [category, setCategory] = useState<Category>([]);
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
   const [error, setError] = useState("");
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -44,6 +49,7 @@ const BookDetailPage: React.FC = () => {
         const res = await axios.get(`${API_BASE_URL}/products/${id}`);
         setProduct(res.data.data.product || null);
         setVariants(res.data.data.variant || []);
+        setCategory(res.data.data.category || []);
       } catch (err) {
         setError("Không tìm thấy sản phẩm!");
       } finally {
@@ -248,6 +254,9 @@ const BookDetailPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {getProductName(product)}
             </h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Danh mục: {category.name}
+            </h1>
             <p className="text-lg text-gray-700 mb-4">Tác giả: {product.author}</p>
             <p className="text-gray-700 mb-6 leading-relaxed">
               Mô tả: {product.description}
@@ -269,10 +278,7 @@ const BookDetailPage: React.FC = () => {
               </p>
             )}
   
-      
-  
-
-  
+    
             <div className="mb-6">
               <p className="font-semibold mb-2">Chọn loại bìa:</p>
               <div className="flex gap-3 flex-wrap items-center">

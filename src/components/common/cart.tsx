@@ -6,9 +6,15 @@ import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
 import { API_BASE_URL } from "../../configs/api";
 
+interface CartItem {
+  product_id: any;
+  variant_id?: any;
+  quantity: number;
+}
+
 function Cart() {
-  const { user, isAuthenticated } = useAuth();
-  const [cartItems, setCartItems] = useState([]);
+  const { isAuthenticated } = useAuth();
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -27,7 +33,6 @@ function Cart() {
       const res = await axios.get(`${API_BASE_URL}/cart`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-
       setCartItems(res.data.data?.items || []);
     } catch (err) {
       console.error("Lỗi lấy giỏ hàng:", err);
@@ -35,69 +40,104 @@ function Cart() {
     setLoading(false);
   };
 
-  const increaseQuantity = async (productId: string) => {
-    const item = cartItems.find((i: any) => i.product_id?._id === productId);
-    if (!item) return;
-    const newQty = item.quantity + 1;
+  const getMaxQuantity = (item: CartItem) => {
+    return item.variant_id?.quantity ?? item.product_id.quantity ?? 99;
+  };
 
-    try {
-      await axios.put(
-        `${API_BASE_URL}/cart/items/${productId}`,
-        {
-          quantity: newQty,
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  const increaseQuantity = async (productId: string, variantId: string | null) => {
+  setCartItems((prev) =>
+    prev.map((i) =>
+      i.product_id?._id === productId &&
+      (i.variant_id?._id || null) === variantId &&
+      i.quantity < getMaxQuantity(i)
+        ? { ...i, quantity: i.quantity + 1 }
+        : i
+    )
+  );
+
+  try {
+    await axios.put(
+      `${API_BASE_URL}/cart/items/${productId}`,
+      {
+        variant_id: variantId,
+        action: "increase"
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
         }
-      );
-      fetchCart();
-    } catch (error) {
-      console.error("Lỗi tăng số lượng", error);
-    }
-  };
+      }
+    );
+  } catch (err) {
+    console.error("Lỗi tăng số lượng", err);
+  }
+};
 
-  const decreaseQuantity = async (productId: string) => {
-    const item = cartItems.find((i: any) => i.product_id?._id === productId);
-    if (!item) return;
-    const newQty = item.quantity - 1;
-    if (newQty < 1) return;
+const decreaseQuantity = async (productId: string, variantId: string | null) => {
+  setCartItems((prev) =>
+    prev.map((i) =>
+      i.product_id?._id === productId &&
+      (i.variant_id?._id || null) === variantId &&
+      i.quantity > 1
+        ? { ...i, quantity: i.quantity - 1 }
+        : i
+    )
+  );
 
-    try {
-      await axios.put(
-        `${API_BASE_URL}/cart/items/${productId}`,
-        {
-          quantity: newQty,
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  try {
+    await axios.put(
+      `${API_BASE_URL}/cart/items/${productId}`,
+      {
+        variant_id: variantId,
+        action: "decrease"
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
         }
-      );
-      fetchCart();
-    } catch (error) {
-      console.error("Lỗi giảm số lượng", error);
-    }
-  };
+      }
+    );
+  } catch (err) {
+    console.error("Lỗi giảm số lượng", err);
+  }
+};
 
-  const removeItem = async (productId: string) => {
-    try {
-      await axios.delete(`${API_BASE_URL}/cart/items/${productId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      fetchCart();
-    } catch (error) {
-      console.error("Lỗi xoá sản phẩm", error);
-    }
-  };
+
+
+  const removeItem = async (productId: string, variantId?: string | null) => {
+ 
+  const previousCart = [...cartItems];
+
+  setCartItems((prev) =>
+    prev.filter(
+      (i) =>
+        !(i.product_id?._id === productId && (i.variant_id?._id || null) === (variantId || null))
+    )
+  );
+
+  try {
+    await axios.delete(
+      `${API_BASE_URL}/cart/items/${productId}`,
+      {
+        data: { variant_id: variantId || null }, 
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        }
+      }
+    );
+  } catch (err) {
+    console.error("Lỗi xoá sản phẩm", err);
+
+    setCartItems(previousCart);
+  }
+};
 
   const total = cartItems.reduce(
-    (sum, item: any) => sum + item.product_id.price * item.quantity,
+    (sum, item) => sum + (item.variant_id?.price ?? item.product_id.price) * item.quantity,
     0
   );
 
-  const handleCheckout = () => {
-    navigate("/thanhtoan");
-  };
-
+  const handleCheckout = () => navigate("/thanhtoan");
   const handleCloseLoginModal = () => {
     setShowLoginModal(false);
     navigate("/");
@@ -121,15 +161,13 @@ function Cart() {
           <h1 className="text-3xl font-extrabold text-purple-700">Giỏ Hàng</h1>
         </div>
 
-        {cartItems.length === 0 ? (
+        {loading ? (
+          <p className="text-center py-10 text-gray-600">Đang tải giỏ hàng...</p>
+        ) : cartItems.length === 0 ? (
           <div className="text-center py-20">
             <ShoppingCart className="w-24 h-24 mx-auto text-gray-300 mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-600 mb-2">
-              Giỏ hàng trống
-            </h2>
-            <p className="text-gray-500 mb-6">
-              Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm
-            </p>
+            <h2 className="text-2xl font-semibold text-gray-600 mb-2">Giỏ hàng trống</h2>
+            <p className="text-gray-500 mb-6">Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm</p>
             <button
               onClick={() => navigate("/")}
               className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition"
@@ -150,57 +188,57 @@ function Cart() {
                   <th className="p-3 text-center w-[10%]">Xóa</th>
                 </tr>
               </thead>
-
               <tbody>
-                {cartItems.map((item: any) => {
+                {cartItems.map((item) => {
                   const product = item.product_id;
-                  const id = product._id;
+                  const variant = item.variant_id;
+                  const price = variant?.price ?? 0;
+                  const maxQty = getMaxQuantity(item);
 
                   return (
-                    <tr key={id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 flex ">
+                    <tr key={product._id} className="border-b hover:bg-gray-50">
+                      <td className="p-3 flex justify-center">
                         <img
-                          src={product.images?.[0]}
+                          src={product.images?.[0] || "/placeholder.jpg"}
                           className="w-16 h-16 rounded-xl object-cover"
                           alt={product.name}
                         />
                       </td>
-
                       <td className="p-3 text-center font-semibold">
-                        {product.name}
+                        {product.name} {variant ? `(${variant.type})` : ""}
                       </td>
-
                       <td className="p-3 text-center text-purple-700 font-semibold">
-                        {product.price.toLocaleString()} đ
+                        {price.toLocaleString()} đ
                       </td>
-
                       <td className="p-3 text-center">
                         <div className="flex justify-center items-center space-x-2 w-max mx-auto px-2 py-1 rounded">
                           <button
-                            onClick={() => decreaseQuantity(id)}
-                            className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center"
+                            onClick={() => decreaseQuantity(item.product_id._id, item.variant_id?._id || null)}
+                            disabled={item.quantity <= 1}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              item.quantity <= 1 ? "bg-gray-300 cursor-not-allowed" : "bg-purple-600 text-white"
+                            }`}
                           >
                             −
                           </button>
-                          <span className="text-lg font-medium">
-                            {item.quantity}
-                          </span>
+                          <span className="text-lg font-medium">{item.quantity}</span>
                           <button
-                            onClick={() => increaseQuantity(id)}
-                            className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center"
+                            onClick={() => increaseQuantity(item.product_id._id, item.variant_id?._id || null)}
+                            disabled={item.quantity >= maxQty}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              item.quantity >= maxQty ? "bg-gray-300 cursor-not-allowed" : "bg-purple-600 text-white"
+                            }`}
                           >
                             +
                           </button>
                         </div>
                       </td>
-
                       <td className="p-3 text-center font-semibold">
-                        {(product.price * item.quantity).toLocaleString()} đ
+                        {(price * item.quantity).toLocaleString()} đ
                       </td>
-
                       <td className="p-3 text-center">
                         <button
-                          onClick={() => removeItem(id)}
+                          onClick={() => removeItem(item.product_id._id, item.variant_id?._id || null)}
                           className="text-red-500 hover:text-red-700"
                         >
                           Xóa
@@ -214,15 +252,11 @@ function Cart() {
 
             <div className="flex justify-end mt-10">
               <div className="bg-white border rounded-2xl shadow-md p-6 w-80">
-                <h2 className="text-lg font-bold text-purple-700 mb-3 text-center">
-                  Tổng Đơn hàng
-                </h2>
-
+                <h2 className="text-lg font-bold text-purple-700 mb-3 text-center">Tổng Đơn hàng</h2>
                 <div className="flex justify-between text-gray-700 mb-2">
                   <span>Tổng tiền</span>
-                  <span>{total.toLocaleString()} đ</span>
+                  {/* <span>{total.toLocaleString()} đ</span> */}
                 </div>
-
                 <button
                   onClick={handleCheckout}
                   className="bg-purple-600 text-white w-full py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition"
