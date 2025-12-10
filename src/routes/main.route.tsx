@@ -9,7 +9,8 @@ import Register from "../pages/Auth/Register";
 import ForgotPassword from "../pages/Auth/ForgotPassword";
 import OrderList from "../pages/order/order";
 import OrderDetailPage from "../pages/order/orderDetail";
-import SearchPage from "../pages/SearchPage";   // <-- giữ lại dòng này
+import SearchPage from "../pages/SearchPage";
+import FavoritesPage from "../pages/FavoritePage";
 
 export const router = createBrowserRouter([
   {
@@ -55,6 +56,10 @@ export const router = createBrowserRouter([
       {
         path: "search",
         element: <SearchPage />,
+      },
+      {
+        path: "favorite",
+        element: <FavoritesPage />,
       },
     ],
   },
