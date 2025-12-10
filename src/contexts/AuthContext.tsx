@@ -1,13 +1,14 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import axios from "axios";
-import { API_BASE_URL } from "../configs/api";
-
 
 interface User {
   id: string;
   email: string;
   name: string;
   role: "admin" | "user";
+  phone?: string;
+  address?: any;
+  createdAt?: string;
 }
 
 interface AuthContextType {
@@ -35,21 +36,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const storedUser = localStorage.getItem("user");
 
     if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      // Set default header cho axios
-      axios.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setToken(storedToken);
+        setUser(parsedUser);
+        // Set default header cho axios
+        axios.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${storedToken}`;
+        console.log("✅ User restored from localStorage:", parsedUser.email);
+      } catch (error) {
+        console.error("Error parsing stored user:", error);
+        // Nếu có lỗi parse, xóa dữ liệu lỗi
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
     }
+
     setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/auth/login`,
+        "http://localhost:5004/api/auth/login",
         {
           email,
-          password
+          password,
         }
       );
 
@@ -64,8 +77,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Set default header cho axios
       axios.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+
+      console.log("Login successful:", newUser.email);
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error(" Login failed:", error);
       throw error;
     }
   };
@@ -76,6 +91,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     delete axios.defaults.headers.common["Authorization"];
+
+    console.log("Logged out");
   };
 
   const value = {
@@ -83,10 +100,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     token,
     login,
     logout,
-    isAuthenticated: !!token,
+    isAuthenticated: !!token && !!user,
     isAdmin: user?.role === "admin",
     loading,
   };
+
+  // Hiển thị loading khi đang khởi động
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
