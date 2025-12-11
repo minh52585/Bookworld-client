@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../configs/api";
 
 interface User {
   id: string;
@@ -44,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         axios.defaults.headers.common[
           "Authorization"
         ] = `Bearer ${storedToken}`;
-        console.log("✅ User restored from localStorage:", parsedUser.email);
+        console.log("User restored from localStorage:", parsedUser.email);
       } catch (error) {
         console.error("Error parsing stored user:", error);
         // Nếu có lỗi parse, xóa dữ liệu lỗi
@@ -58,13 +59,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post(
-        "http://localhost:5007/api/auth/login",
-        {
-          email,
-          password,
-        }
-      );
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+        email,
+        password,
+      });
 
       const { token: newToken, user: newUser } = response.data;
 

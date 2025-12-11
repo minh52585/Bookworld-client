@@ -11,6 +11,7 @@ import OrderList from "../pages/order/order";
 import OrderDetailPage from "../pages/order/orderDetail";
 import SearchPage from "../pages/SearchPage";
 import FavoritesPage from "../pages/FavoritePage";
+import UserProfile from "../pages/UserProfile";
 
 export const router = createBrowserRouter([
   {
@@ -60,6 +61,10 @@ export const router = createBrowserRouter([
       {
         path: "favorite",
         element: <FavoritesPage />,
+      },
+      {
+        path: "user-profile",
+        element: <UserProfile />,
       },
     ],
   },
