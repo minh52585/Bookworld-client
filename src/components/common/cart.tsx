@@ -16,6 +16,7 @@ function Cart() {
   const { isAuthenticated } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -132,10 +133,16 @@ const decreaseQuantity = async (productId: string, variantId: string | null) => 
   }
 };
 
-  const total = cartItems.reduce(
-    (sum, item) => sum + (item.variant_id?.price ?? item.product_id.price) * item.quantity,
+  const subtotal = cartItems
+  .filter((item) =>
+    selectedItems.includes(item.product_id._id + (item.variant_id?._id || ""))
+  )
+  .reduce(
+    (sum, item) =>
+      sum + (item.variant_id?.price ?? item.product_id.price) * item.quantity,
     0
   );
+
 
   const handleCheckout = () => navigate("/thanhtoan");
   const handleCloseLoginModal = () => {
@@ -152,6 +159,13 @@ const decreaseQuantity = async (productId: string, variantId: string | null) => 
       />
     );
   }
+  const toggleSelect = (key: string) => {
+  setSelectedItems((prev) =>
+    prev.includes(key)
+      ? prev.filter((id) => id !== key)
+      : [...prev, key]
+  );
+};
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10">
@@ -180,91 +194,148 @@ const decreaseQuantity = async (productId: string, variantId: string | null) => 
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b text-gray-600 text-sm uppercase">
+                  <th className="p-3 w-[15%]"></th>
                   <th className="p-3 w-[15%]">Ảnh sản phẩm</th>
                   <th className="p-3 text-center w-[15%]">Tên sản phẩm</th>
-                  <th className="p-3 text-center">Giá</th>
+                  <th className="p-3 text-center w-[15%]">Loại bìa</th>
+                  <th className="p-3 text-center w-[15%]">Danh mục</th>
+                  <th className="p-3 text-center">Đơn Giá</th>
                   <th className="p-3 text-center w-[15%]">Số lượng</th>
                   <th className="p-3 text-center w-[10%]">Tổng</th>
-                  <th className="p-3 text-center w-[10%]">Xóa</th>
+                  <th className="p-3 text-center w-[10%]">Hành động</th>
                 </tr>
               </thead>
               <tbody>
-                {cartItems.map((item) => {
-                  const product = item.product_id;
-                  const variant = item.variant_id;
-                  const price = variant?.price ?? 0;
-                  const maxQty = getMaxQuantity(item);
+                  {cartItems.map((item) => {
+                    const product = item.product_id;
+                    const variant = item.variant_id;
 
-                  return (
-                    <tr key={product._id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 flex justify-center">
-                        <img
-                          src={product.images?.[0] || "/placeholder.jpg"}
-                          className="w-16 h-16 rounded-xl object-cover"
-                          alt={product.name}
-                        />
-                      </td>
-                      <td className="p-3 text-center font-semibold">
-                        {product.name} {variant ? `(${variant.type})` : ""}
-                      </td>
-                      <td className="p-3 text-center text-purple-700 font-semibold">
-                        {price.toLocaleString()} đ
-                      </td>
-                      <td className="p-3 text-center">
-                        <div className="flex justify-center items-center space-x-2 w-max mx-auto px-2 py-1 rounded">
+                    const key = product._id + (variant?._id || ""); // unique key
+                    const price = variant?.price ?? product.price;
+                    const maxQty = getMaxQuantity(item);
+
+                    return (
+                      <tr key={key} className="border-b hover:bg-gray-50">
+                        
+                        {/* CHECKBOX */}
+                        <td className="p-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.includes(key)}
+                            onChange={() => toggleSelect(key)}
+                            className="w-5 h-5 accent-purple-600"
+                          />
+                        </td>
+
+                        {/* ẢNH */}
+                        <td className="p-3 flex justify-center">
+                          <img
+                            src={product.images?.[0] || "/placeholder.jpg"}
+                            className="w-16 h-16 rounded-xl object-cover"
+                            alt={product.name}
+                          />
+                        </td>
+
+                    
+                        <td className="p-3 text-left font-semibold">
+                          <span>{product.name}</span>
+                          
+                        </td>
+                        <td>
+                          {variant && (
+                            <p className="p-3 text-left">
+                            {variant.type}
+                            </p>
+                          )}
+                        </td>
+
+                        <td><p className="p-3 text-left">
+                            {product.category?.name || "—"}
+                        </p></td>
+                        
+
+                        {/* GIÁ */}
+                        <td className="p-3 text-center text-purple-700 font-semibold">
+                          {price.toLocaleString()} đ
+                        </td>
+
+                        {/* SỐ LƯỢNG */}
+                        <td className="p-3 text-center">
+                          <div className="flex justify-center items-center space-x-2">
+                            <button
+                              onClick={() => decreaseQuantity(product._id, variant?._id || null)}
+                              disabled={item.quantity <= 1}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                item.quantity <= 1
+                                  ? "bg-gray-300 cursor-not-allowed"
+                                  : "bg-purple-600 text-white"
+                              }`}
+                            >
+                              −
+                            </button>
+
+                            <span className="text-lg font-medium">{item.quantity}</span>
+
+                            <button
+                              onClick={() => increaseQuantity(product._id, variant?._id || null)}
+                              disabled={item.quantity >= maxQty}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                item.quantity >= maxQty
+                                  ? "bg-gray-300 cursor-not-allowed"
+                                  : "bg-purple-600 text-white"
+                              }`}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* TỔNG */}
+                        <td className="p-3 text-center font-semibold">
+                          {(price * item.quantity).toLocaleString()} đ
+                        </td>
+
+                        {/* XOÁ */}
+                        <td className="p-3 text-center">
                           <button
-                            onClick={() => decreaseQuantity(item.product_id._id, item.variant_id?._id || null)}
-                            disabled={item.quantity <= 1}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              item.quantity <= 1 ? "bg-gray-300 cursor-not-allowed" : "bg-purple-600 text-white"
-                            }`}
+                            onClick={() => removeItem(product._id, variant?._id || null)}
+                            className="text-red-500 hover:text-red-700"
                           >
-                            −
+                            Xóa
                           </button>
-                          <span className="text-lg font-medium">{item.quantity}</span>
-                          <button
-                            onClick={() => increaseQuantity(item.product_id._id, item.variant_id?._id || null)}
-                            disabled={item.quantity >= maxQty}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              item.quantity >= maxQty ? "bg-gray-300 cursor-not-allowed" : "bg-purple-600 text-white"
-                            }`}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </td>
-                      <td className="p-3 text-center font-semibold">
-                        {(price * item.quantity).toLocaleString()} đ
-                      </td>
-                      <td className="p-3 text-center">
-                        <button
-                          onClick={() => removeItem(item.product_id._id, item.variant_id?._id || null)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Xóa
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+
             </table>
 
             <div className="flex justify-end mt-10">
               <div className="bg-white border rounded-2xl shadow-md p-6 w-80">
-                <h2 className="text-lg font-bold text-purple-700 mb-3 text-center">Tổng Đơn hàng</h2>
-                <div className="flex justify-between text-gray-700 mb-2">
-                  <span>Tổng tiền</span>
-                  {/* <span>{total.toLocaleString()} đ</span> */}
+                <h2 className="text-lg font-bold text-purple-700 mb-3 text-center">
+                  Tạm tính
+                </h2>
+
+                <div className="flex justify-between text-gray-700 mb-4">
+                  <span>Tổng sản phẩm đã chọn</span>
+                  <span>{subtotal.toLocaleString()} đ</span>
                 </div>
+
                 <button
                   onClick={handleCheckout}
-                  className="bg-purple-600 text-white w-full py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition"
+                  disabled={subtotal === 0}
+                  className={`w-full py-2.5 rounded-lg font-semibold transition ${
+                    subtotal === 0
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : "bg-purple-600 text-white hover:bg-purple-700"
+                  }`}
                 >
                   Thanh Toán
                 </button>
               </div>
             </div>
+
           </>
         )}
       </div>
