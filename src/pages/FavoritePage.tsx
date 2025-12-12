@@ -5,16 +5,6 @@ import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "./Auth/LoginModal";
 import { API_BASE_URL } from "../configs/api";
 
-interface Variant {
-  _id: string;
-  product_id: string;
-  type: "Bìa cứng" | "Bìa mềm";
-  price: number;
-  sku: string;
-  quantity: number;
-  status: "active" | "inactive";
-}
-
 interface Category {
   _id: string;
   name: string;
@@ -34,7 +24,8 @@ interface Product {
   weight: number;
   size: string;
   sku: string;
-  variants?: Variant[];
+  price: number;
+  quantity: number;
 }
 
 interface FavoriteItem {
@@ -50,9 +41,6 @@ const FavoritesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCartNotification, setShowCartNotification] = useState(false);
-  const [selectedVariants, setSelectedVariants] = useState<
-    Record<string, string>
-  >({});
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -70,7 +58,7 @@ const FavoritesPage: React.FC = () => {
 
   const fetchFavorites = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/favorites`, {
+      const response = await axios.get(`${API_BASE_URL}/me/favorites`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -88,14 +76,6 @@ const FavoritesPage: React.FC = () => {
       }
 
       setFavorites(favoritesList);
-
-      const defaultVariants: Record<string, string> = {};
-      favoritesList.forEach((item) => {
-        if (item.product.variants && item.product.variants.length > 0) {
-          defaultVariants[item.product._id] = item.product.variants[0]._id;
-        }
-      });
-      setSelectedVariants(defaultVariants);
     } catch (error) {
       console.error("Lỗi khi tải danh sách yêu thích:", error);
       showNotification("Không thể tải danh sách yêu thích", "error");
@@ -106,7 +86,7 @@ const FavoritesPage: React.FC = () => {
 
   const handleRemoveFavorite = async (productId: string) => {
     try {
-      await axios.delete(`${API_BASE_URL}/favorites/${productId}`, {
+      await axios.delete(`${API_BASE_URL}/me/favorite/${productId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -126,15 +106,12 @@ const FavoritesPage: React.FC = () => {
       return;
     }
 
-    const variantId = selectedVariants[productId];
-
     try {
       await axios.post(
         `${API_BASE_URL}/cart/items`,
         {
           product_id: productId,
           quantity: 1,
-          variant_id: variantId,
         },
         {
           headers: {
@@ -155,13 +132,6 @@ const FavoritesPage: React.FC = () => {
     navigate(`/products/${productId}`);
   };
 
-  const handleVariantChange = (productId: string, variantId: string) => {
-    setSelectedVariants((prev) => ({
-      ...prev,
-      [productId]: variantId,
-    }));
-  };
-
   const showNotification = (message: string, type: "success" | "error") => {
     setNotification({ show: true, message, type });
     setTimeout(() => {
@@ -171,29 +141,6 @@ const FavoritesPage: React.FC = () => {
 
   const getProductImage = (p: Product) =>
     p.images && p.images.length > 0 ? p.images[0] : "/placeholder.jpg";
-
-  const getSelectedVariant = (product: Product) => {
-    if (!product.variants || product.variants.length === 0) return null;
-    const selectedId = selectedVariants[product._id];
-    return (
-      product.variants.find((v) => v._id === selectedId) || product.variants[0]
-    );
-  };
-
-  const getLowestPrice = (product: Product) => {
-    if (!product.variants || product.variants.length === 0) return 0;
-    return Math.min(...product.variants.map((v) => v.price));
-  };
-
-  const getHighestPrice = (product: Product) => {
-    if (!product.variants || product.variants.length === 0) return 0;
-    return Math.max(...product.variants.map((v) => v.price));
-  };
-
-  const getTotalStock = (product: Product) => {
-    if (!product.variants || product.variants.length === 0) return 0;
-    return product.variants.reduce((sum, v) => sum + v.quantity, 0);
-  };
 
   if (!isAuthenticated) {
     return (
@@ -318,194 +265,136 @@ const FavoritesPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {favorites.map((item) => {
-              const selectedVariant = getSelectedVariant(item.product);
-              const lowestPrice = getLowestPrice(item.product);
-              const highestPrice = getHighestPrice(item.product);
-              const totalStock = getTotalStock(item.product);
-
-              return (
+            {favorites.map((item) => (
+              <div
+                key={item._id}
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+              >
+                {/* Product Image */}
                 <div
-                  key={item._id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                  className="relative cursor-pointer group"
+                  onClick={() => handleProductClick(item.product._id)}
                 >
-                  {/* Product Image */}
-                  <div
-                    className="relative cursor-pointer group"
+                  <img
+                    src={getProductImage(item.product)}
+                    alt={item.product.name}
+                    className="w-full h-80 object-cover group-hover:opacity-90 transition"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src =
+                        'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="400"%3E%3Crect width="300" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                    }}
+                  />
+                  {/* Remove Button Overlay */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveFavorite(item.product._id);
+                    }}
+                    className="absolute top-3 left-3 bg-white text-red-500 p-3 rounded-full shadow-lg hover:bg-red-500 hover:text-white transition opacity-0 group-hover:opacity-100"
+                  >
+                    <i className="fas fa-heart text-xl"></i>
+                  </button>
+                </div>
+
+                {/* Product Info */}
+                <div className="p-5">
+                  {/* Category */}
+                  {item.product.category && (
+                    <div className="mb-2">
+                      <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
+                        {item.product.category.name}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Title */}
+                  <h3
+                    className="font-bold text-gray-900 mb-2 line-clamp-2 hover:text-purple-600 cursor-pointer text-lg"
                     onClick={() => handleProductClick(item.product._id)}
                   >
-                    <img
-                      src={getProductImage(item.product)}
-                      alt={item.product.name}
-                      className="w-full h-80 object-cover group-hover:opacity-90 transition"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src =
-                          'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="400"%3E%3Crect width="300" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                      }}
-                    />
-                    {/* Remove Button Overlay */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveFavorite(item.product._id);
-                      }}
-                      className="absolute top-3 left-3 bg-white text-red-500 p-3 rounded-full shadow-lg hover:bg-red-500 hover:text-white transition opacity-0 group-hover:opacity-100"
-                    >
-                      <i className="fas fa-heart text-xl"></i>
-                    </button>
+                    {item.product.name}
+                  </h3>
+
+                  {/* Author */}
+                  <p className="text-sm text-gray-600 mb-1">
+                    {item.product.author}
+                  </p>
+
+                  {/* Publisher & Year */}
+                  <p className="text-xs text-gray-500 mb-3">
+                    {item.product.nhaxuatban} • {item.product.namxuatban}
+                  </p>
+
+                  {/* Price */}
+                  <div className="mb-3">
+                    <span className="text-2xl font-bold text-red-600">
+                      {item.product.price.toLocaleString("vi-VN")}₫
+                    </span>
                   </div>
 
-                  {/* Product Info */}
-                  <div className="p-5">
-                    {/* Category */}
-                    {item.product.category && (
-                      <div className="mb-2">
-                        <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
-                          {item.product.category.name}
-                        </span>
+                  {/* Stock Status */}
+                  <div className="mb-4">
+                    {item.product.quantity > 0 ? (
+                      <span className="text-sm text-green-600 flex items-center">
+                        <i className="fas fa-check-circle mr-1"></i>
+                        Còn {item.product.quantity} sản phẩm
+                      </span>
+                    ) : (
+                      <span className="text-sm text-red-600 flex items-center">
+                        <i className="fas fa-times-circle mr-1"></i>
+                        Hết hàng
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Product Details */}
+                  <div className="mb-4 text-xs text-gray-600 space-y-1">
+                    <div className="flex items-center">
+                      <i className="fas fa-book-open w-4 mr-2"></i>
+                      <span>{item.product.sotrang} trang</span>
+                    </div>
+                    {item.product.size && (
+                      <div className="flex items-center">
+                        <i className="fas fa-ruler-combined w-4 mr-2"></i>
+                        <span>{item.product.size}</span>
                       </div>
                     )}
+                    {item.product.weight > 0 && (
+                      <div className="flex items-center">
+                        <i className="fas fa-weight w-4 mr-2"></i>
+                        <span>{item.product.weight}g</span>
+                      </div>
+                    )}
+                  </div>
 
-                    {/* Title */}
-                    <h3
-                      className="font-bold text-gray-900 mb-2 line-clamp-2 hover:text-purple-600 cursor-pointer text-lg"
-                      onClick={() => handleProductClick(item.product._id)}
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleAddToCart(item.product._id)}
+                      disabled={item.product.quantity === 0}
+                      className={`flex-1 py-2.5 rounded-lg font-semibold transition ${
+                        item.product.quantity === 0
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-purple-600 text-white hover:bg-purple-700"
+                      }`}
                     >
-                      {item.product.name}
-                    </h3>
-
-                    {/* Author */}
-                    <p className="text-sm text-gray-600 mb-1">
-                      {item.product.author}
-                    </p>
-
-                    {/* Publisher & Year */}
-                    <p className="text-xs text-gray-500 mb-3">
-                      {item.product.nhaxuatban} • {item.product.namxuatban}
-                    </p>
-
-                    {/* Variants Selection */}
-                    {item.product.variants &&
-                      item.product.variants.length > 0 && (
-                        <div className="mb-3">
-                          <p className="text-xs text-gray-600 mb-2 font-semibold">
-                            Chọn phiên bản:
-                          </p>
-                          <div className="flex gap-2">
-                            {item.product.variants.map((variant) => (
-                              <button
-                                key={variant._id}
-                                onClick={() =>
-                                  handleVariantChange(
-                                    item.product._id,
-                                    variant._id
-                                  )
-                                }
-                                className={`flex-1 px-3 py-2 text-sm rounded-lg border-2 transition ${
-                                  selectedVariants[item.product._id] ===
-                                  variant._id
-                                    ? "border-purple-600 bg-purple-50 text-purple-700 font-semibold"
-                                    : "border-gray-300 text-gray-700 hover:border-purple-400"
-                                }`}
-                              >
-                                <div>{variant.type}</div>
-                                <div className="text-xs font-bold">
-                                  {variant.price.toLocaleString("vi-VN")}₫
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Price */}
-                    <div className="mb-3">
-                      {selectedVariant ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-red-600">
-                            {selectedVariant.price.toLocaleString("vi-VN")}₫
-                          </span>
-                        </div>
-                      ) : lowestPrice === highestPrice ? (
-                        <span className="text-2xl font-bold text-red-600">
-                          {lowestPrice.toLocaleString("vi-VN")}₫
-                        </span>
-                      ) : (
-                        <span className="text-2xl font-bold text-red-600">
-                          {lowestPrice.toLocaleString("vi-VN")}₫ -{" "}
-                          {highestPrice.toLocaleString("vi-VN")}₫
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Stock Status */}
-                    <div className="mb-4">
-                      {selectedVariant ? (
-                        selectedVariant.quantity > 0 ? (
-                          <span className="text-sm text-green-600 flex items-center">
-                            <i className="fas fa-check-circle mr-1"></i>
-                            Còn {selectedVariant.quantity} sản phẩm
-                          </span>
-                        ) : (
-                          <span className="text-sm text-red-600 flex items-center">
-                            <i className="fas fa-times-circle mr-1"></i>
-                            Hết hàng
-                          </span>
-                        )
-                      ) : totalStock > 0 ? (
-                        <span className="text-sm text-green-600 flex items-center">
-                          <i className="fas fa-check-circle mr-1"></i>
-                          Còn {totalStock} sản phẩm
-                        </span>
-                      ) : (
-                        <span className="text-sm text-red-600 flex items-center">
-                          <i className="fas fa-times-circle mr-1"></i>
-                          Hết hàng
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAddToCart(item.product._id)}
-                        disabled={
-                          selectedVariant
-                            ? selectedVariant.quantity === 0
-                            : totalStock === 0
-                        }
-                        className={`flex-1 py-2.5 rounded-lg font-semibold transition ${
-                          (
-                            selectedVariant
-                              ? selectedVariant.quantity === 0
-                              : totalStock === 0
-                          )
-                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            : "bg-purple-600 text-white hover:bg-purple-700"
-                        }`}
-                      >
-                        <i className="fas fa-shopping-cart mr-2"></i>
-                        {(
-                          selectedVariant
-                            ? selectedVariant.quantity === 0
-                            : totalStock === 0
-                        )
-                          ? "Hết hàng"
-                          : "Thêm vào giỏ"}
-                      </button>
-                      <button
-                        onClick={() => handleRemoveFavorite(item.product._id)}
-                        className="px-4 py-2.5 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"
-                        title="Xóa khỏi yêu thích"
-                      >
-                        <i className="fas fa-trash-alt"></i>
-                      </button>
-                    </div>
+                      <i className="fas fa-shopping-cart mr-2"></i>
+                      {item.product.quantity === 0
+                        ? "Hết hàng"
+                        : "Thêm vào giỏ"}
+                    </button>
+                    <button
+                      onClick={() => handleRemoveFavorite(item.product._id)}
+                      className="px-4 py-2.5 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"
+                      title="Xóa khỏi yêu thích"
+                    >
+                      <i className="fas fa-trash-alt"></i>
+                    </button>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
 
@@ -524,7 +413,7 @@ const FavoritesPage: React.FC = () => {
                 <i className="fas fa-book text-purple-600 text-4xl mb-3"></i>
                 <h3 className="text-3xl font-bold text-gray-900 mb-1">
                   {favorites.reduce(
-                    (total, item) => total + getTotalStock(item.product),
+                    (total, item) => total + item.product.quantity,
                     0
                   )}
                 </h3>
@@ -534,17 +423,11 @@ const FavoritesPage: React.FC = () => {
                 <i className="fas fa-money-bill-wave text-green-600 text-4xl mb-3"></i>
                 <h3 className="text-3xl font-bold text-gray-900 mb-1">
                   {favorites
-                    .reduce((total, item) => {
-                      const selectedVariant = getSelectedVariant(item.product);
-                      return (
-                        total +
-                        (selectedVariant?.price || getLowestPrice(item.product))
-                      );
-                    }, 0)
+                    .reduce((total, item) => total + item.product.price, 0)
                     .toLocaleString("vi-VN")}
                   ₫
                 </h3>
-                <p className="text-gray-600">Tổng giá trị (theo lựa chọn)</p>
+                <p className="text-gray-600">Tổng giá trị</p>
               </div>
             </div>
           </div>
