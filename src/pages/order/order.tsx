@@ -258,31 +258,46 @@ function OrderList() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {selectedOrder.items.map((item: any, idx: number) => (
-                        <tr key={idx}>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={
-                                  item.image || "https://via.placeholder.com/60"
-                                }
-                                alt={item.name}
-                                className="w-14 h-14 object-cover rounded-lg"
-                              />
-                              <span className="font-medium">{item.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {item.quantity}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            {item.price.toLocaleString()} đ
-                          </td>
-                          <td className="px-4 py-3 text-right font-semibold text-purple-600">
-                            {(item.price * item.quantity).toLocaleString()} đ
-                          </td>
-                        </tr>
-                      ))}
+                          {selectedOrder.items.map((item: any, idx: number) => {
+                          const product = item.product_id;
+                          const variant = item.variant_id;
+
+                          const name = product?.name || "Sản phẩm";
+                          const variantName = variant?.type ? `(${variant.type})` : "";
+                          const price = variant?.price || 0;
+                          const image = product?.images?.[0] || "https://via.placeholder.com/60";
+
+                          return (
+                            <tr key={idx}>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <img
+                                    src={image}
+                                    alt={name}
+                                    className="w-14 h-14 object-cover rounded-lg"
+                                  />
+                                  <div>
+                                    <p className="font-medium">{name}</p>
+                                    {variant?.type && (
+                                      <p className="text-sm text-gray-500">{variantName}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3 text-center">{item.quantity || 1}</td>
+
+                              <td className="px-4 py-3 text-right">
+                                {price.toLocaleString()} đ
+                              </td>
+
+                              <td className="px-4 py-3 text-right font-semibold text-purple-600">
+                                {(price * (item.quantity || 1)).toLocaleString()} đ
+                              </td>
+                            </tr>
+                          );
+                        })}
+
                     </tbody>
                   </table>
                 </div>

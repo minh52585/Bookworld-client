@@ -6,6 +6,9 @@ import LoginModal from "../../pages/Auth/LoginModal";
 import axios from "axios";
 import { API_BASE_URL } from "../../configs/api";
 
+import { useLocation } from "react-router-dom";
+
+
 
 function Thanhtoan() {
   const [cartItems, setCartItems] = useState<any[]>([]);
@@ -13,7 +16,8 @@ function Thanhtoan() {
   const [loading, setLoading] = useState(true);
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
+  const location = useLocation();
+  const selectedItems = location.state?.selectedItems || [];
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -34,16 +38,30 @@ function Thanhtoan() {
 
   // Lấy giỏ hàng từ API
   const fetchCart = async () => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/cart`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setCartItems(res.data.data?.items || []);
-    } catch (err) {
-      console.error("Lỗi lấy giỏ hàng:", err);
-    }
-    setLoading(false);
-  };
+  try {
+    const res = await axios.get(`${API_BASE_URL}/cart`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+
+    const allItems = res.data.data?.items || [];
+
+    // Convert selectedItems từ object sang key dạng string để so sánh
+    const selectedKeys = selectedItems.map((s: any) =>
+      s.product_id._id + (s.variant_id?._id || "null")
+    );
+
+    const filtered = allItems.filter((item: any) => {
+      const key = item.product_id._id + (item.variant_id?._id || "null");
+      return selectedKeys.includes(key);
+    });
+
+    setCartItems(filtered);
+  } catch (err) {
+    console.error("Lỗi lấy giỏ hàng:", err);
+  }
+  setLoading(false);
+};
+
 
   const fetchUserInfo = async () => {
     try {
@@ -70,22 +88,14 @@ function Thanhtoan() {
   };
 
   // Xóa sản phẩm
-  const handleRemoveItem = async (productId: string) => {
-    try {
-      await axios.delete(`${API_BASE_URL}/cart/items/${productId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      fetchCart();
-    } catch (error) {
-      console.error("Lỗi xoá sản phẩm", error);
-    }
-  };
+
 
   // Tính tổng tiền
-  const total = cartItems.reduce(
-    (sum, item: any) => sum + item.product_id.price * item.quantity,
-    0
-  );
+  const total = cartItems.reduce((sum, item) => {
+  const price = item.variant_id?.price ?? item.product_id.price;
+  return sum + price * item.quantity;
+}, 0);
+
   const phiShip = 30000;
 
   // Xử lý đặt hàng
@@ -128,10 +138,11 @@ function Thanhtoan() {
           method: paymentMethod,
           status: paymentMethod === "cod" ? "pending" : "paid",
         },
-        items: cartItems.map((item: any) => ({
+         items: cartItems.map((item: any) => ({
           product_id: item.product_id._id,
+          variant_id: item.variant_id?._id || null,
           name: item.product_id.name,
-          price: item.product_id.price,
+          price: item.variant_id?.price ?? item.product_id.price,
           quantity: item.quantity,
           image: item.product_id.images?.[0] || "",
         })),
@@ -162,24 +173,32 @@ function Thanhtoan() {
 
         // Xóa giỏ hàng sau khi đặt hàng thành công
         try {
-          const cartResponse = await axios.delete(`${API_BASE_URL}/cart`, {
+          await axios.post(
+          `${API_BASE_URL}/cart/items/clear-selected`,
+          {
+            items: cartItems.map((item: any) => ({
+              product_id: item.product_id._id,
+              variant_id: item.variant_id?._id || null,
+            })),
+          },
+          {
             headers: { Authorization: `Bearer ${token}` },
-          });
-          console.log("Đã xóa giỏ hàng:", cartResponse.data);
+          }
+        );
+
         } catch (err: any) {
-          console.log(
-            "Không thể xóa giỏ hàng:",
-            err.response?.data || err.message
-          );
+          console.log("Không thể xóa giỏ hàng:", err.response?.data || err.message);
         }
+
 
         // Chuyển đến trang danh sách đơn hàng
         navigate("/order");
       } else {
-        alert(
-          "Đặt hàng thất bại: " +
-            (response.data.message || "Lỗi không xác định")
-        );
+            console.log(response.data.message);
+        // alert(
+        //   "Đặt hàng thất bại: " +
+        //     (newFunction(response) || "Lỗi không xác định")
+        // );
       }
     } catch (error: any) {
       console.error("Chi tiết lỗi:", {
@@ -336,45 +355,55 @@ function Thanhtoan() {
             ) : (
               <>
                 {cartItems.map((item: any) => {
-                  const product = item.product_id;
-                  const id = product._id;
-                  return (
-                    <div
-                      key={id}
-                      className="flex items-center gap-3 mb-6 border-b pb-4"
-                    >
-                      <img
-                        src={
-                          product.images?.[0] ||
-                          "https://via.placeholder.com/60"
-                        }
-                        className="w-16 h-16 object-cover rounded-lg"
-                        alt={product.name}
-                      />
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-800">
-                          {product.name}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Số lượng: x{item.quantity}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Đơn giá: {product.price.toLocaleString()}đ
-                        </p>
-                        <p className="font-bold text-purple-600">
-                          Tổng:{" "}
-                          {(product.price * item.quantity).toLocaleString()}đ
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveItem(id)}
-                        className="text-red-500 hover:text-red-700 transition"
+                    const product = item.product_id;
+                    const variant = item.variant_id;
+                    const key = product._id + (variant?._id || "");
+                    
+                    const price = variant?.price ?? product.price;
+                    const totalPrice = price * item.quantity;
+
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center gap-3 mb-6 border-b pb-4"
                       >
-                        <Trash className="w-5 h-5" />
-                      </button>
-                    </div>
-                  );
-                })}
+                        {/* ẢNH SẢN PHẨM */}
+                        <img
+                          src={product.images?.[0] || "https://via.placeholder.com/60"}
+                          className="w-16 h-16 object-cover rounded-lg"
+                          alt={product.name}
+                        />
+
+                        {/* THÔNG TIN SẢN PHẨM */}
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">{product.name}</p>
+
+                          {/* LOẠI BÌA (VARIANT) */}
+                          {variant && (
+                            <p className="text-sm text-gray-700">
+                              Loại bìa: <span className="font-medium">{variant.type}</span>
+                            </p>
+                          )}
+
+                          <p className="text-sm text-gray-600">
+                            Số lượng: <span className="font-medium">x{item.quantity}</span>
+                          </p>
+
+                          <p className="text-sm text-gray-600">
+                            Đơn giá: <span className="font-medium">{price.toLocaleString()}đ</span>
+                          </p>
+
+                          <p className="font-bold text-purple-600 text-lg">
+                            Tổng: {totalPrice.toLocaleString()}đ
+                          </p>
+                        </div>
+
+                      
+                      </div>
+                    );
+                  })}
+
+
 
                 <div className="border-t pt-4 space-y-3">
                   <div className="flex justify-between text-gray-700">
@@ -406,3 +435,7 @@ function Thanhtoan() {
 }
 
 export default Thanhtoan;
+function newFunction(response) {
+  return response.data.message;
+}
+

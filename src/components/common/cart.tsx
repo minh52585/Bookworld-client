@@ -46,27 +46,35 @@ function Cart() {
   };
 
   const increaseQuantity = async (productId: string, variantId: string | null) => {
+  const item = cartItems.find(
+    (i) =>
+      i.product_id?._id === productId &&
+      (i.variant_id?._id || null) === variantId
+  );
+
+  if (!item) return;
+  const newQty = item.quantity + 1;
+
+  // Cập nhật FE trước
   setCartItems((prev) =>
     prev.map((i) =>
       i.product_id?._id === productId &&
-      (i.variant_id?._id || null) === variantId &&
-      i.quantity < getMaxQuantity(i)
-        ? { ...i, quantity: i.quantity + 1 }
+      (i.variant_id?._id || null) === variantId
+        ? { ...i, quantity: newQty }
         : i
     )
   );
 
+  // Gửi API đúng chuẩn BE
   try {
     await axios.put(
       `${API_BASE_URL}/cart/items/${productId}`,
       {
         variant_id: variantId,
-        action: "increase"
+        quantity: newQty, // <<<<<<<<<<<<<<
       },
       {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`
-        }
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }
     );
   } catch (err) {
@@ -74,13 +82,22 @@ function Cart() {
   }
 };
 
+
 const decreaseQuantity = async (productId: string, variantId: string | null) => {
+  const item = cartItems.find(
+    (i) =>
+      i.product_id?._id === productId &&
+      (i.variant_id?._id || null) === variantId
+  );
+
+  if (!item || item.quantity <= 1) return;
+  const newQty = item.quantity - 1;
+
   setCartItems((prev) =>
     prev.map((i) =>
       i.product_id?._id === productId &&
-      (i.variant_id?._id || null) === variantId &&
-      i.quantity > 1
-        ? { ...i, quantity: i.quantity - 1 }
+      (i.variant_id?._id || null) === variantId
+        ? { ...i, quantity: newQty }
         : i
     )
   );
@@ -90,12 +107,10 @@ const decreaseQuantity = async (productId: string, variantId: string | null) => 
       `${API_BASE_URL}/cart/items/${productId}`,
       {
         variant_id: variantId,
-        action: "decrease"
+        quantity: newQty, // <<<<<<<<<<<
       },
       {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`
-        }
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }
     );
   } catch (err) {
@@ -144,7 +159,19 @@ const decreaseQuantity = async (productId: string, variantId: string | null) => 
   );
 
 
-  const handleCheckout = () => navigate("/thanhtoan");
+  const handleCheckout = () => {
+  
+  // Lọc sản phẩm được chọn
+  const selected = cartItems.filter(item =>
+    selectedItems.includes(item.product_id._id + (item.variant_id?._id || ""))
+  );
+
+  // Chuyển sang trang thanh toán
+  navigate("/thanhtoan", {
+    state: { selectedItems: selected }
+  });
+};
+
   const handleCloseLoginModal = () => {
     setShowLoginModal(false);
     navigate("/");
@@ -159,13 +186,22 @@ const decreaseQuantity = async (productId: string, variantId: string | null) => 
       />
     );
   }
-  const toggleSelect = (key: string) => {
+//   const toggleSelect = (key: string) => {
+//   setSelectedItems((prev) =>
+//     prev.includes(key)
+//       ? prev.filter((id) => id !== key)
+//       : [...prev, key]
+//   );
+// };
+
+const toggleSelect = (key: string) => {
   setSelectedItems((prev) =>
     prev.includes(key)
       ? prev.filter((id) => id !== key)
       : [...prev, key]
   );
 };
+
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10">
@@ -210,7 +246,9 @@ const decreaseQuantity = async (productId: string, variantId: string | null) => 
                     const product = item.product_id;
                     const variant = item.variant_id;
 
-                    const key = product._id + (variant?._id || ""); // unique key
+                    const key = product._id + (variant?._id || ""); 
+                    // const key = `${item.product_id._id}-${item.variant_id?._id || "null"}`;
+
                     const price = variant?.price ?? product.price;
                     const maxQty = getMaxQuantity(item);
 
