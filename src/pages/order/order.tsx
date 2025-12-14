@@ -1,26 +1,23 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../../contexts/AuthContext";
-import { Package, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
 import { API_BASE_URL } from "../../configs/api";
+import {Clock, AlertCircle, Eye, CheckCircle, XCircle,  Package, Truck, CheckCheck, RotateCcw,} from "lucide-react";
+import CancelOrderModal from "../../components/modals/CancelOrderModal";
+import { StickyNote } from "lucide-react";
 
 
-// Định nghĩa trạng thái đơn hàng
-const ORDER_STATUS = {
-  pending: { label: "Chờ xác nhận", color: "bg-yellow-100 text-yellow-800" },
-  confirmed: { label: "Đã xác nhận", color: "bg-blue-100 text-blue-800" },
-  shipping: { label: "Đang giao", color: "bg-indigo-100 text-indigo-800" },
-  delivered: { label: "Đã giao", color: "bg-green-100 text-green-800" },
-  cancelled: { label: "Đã hủy", color: "bg-red-100 text-red-800" },
-};
 
 function OrderList() {
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -46,19 +43,6 @@ function OrderList() {
     setLoading(false);
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusInfo = ORDER_STATUS[status] || {
-      label: status,
-      color: "bg-gray-100 text-gray-800",
-    };
-    return (
-      <span
-        className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}
-      >
-        {statusInfo.label}
-      </span>
-    );
-  };
 
   const handleCloseLoginModal = () => {
     setShowLoginModal(false);
@@ -74,6 +58,51 @@ function OrderList() {
       />
     );
   }
+ const ORDER_STATUS_CONFIG: Record<
+  string,
+  {
+    label: string;
+    icon: React.ReactNode;
+    className: string;
+  }
+> = {
+  "Đã hủy": {
+    label: "Đã hủy",
+    icon: <XCircle className="w-4 h-4" />,
+    className: "bg-red-100 text-red-700 border border-red-300",
+  },
+  "Chờ xử lý": {
+    label: "Chờ xử lý",
+    icon: <Clock className="w-4 h-4" />,
+    className: "bg-gray-100 text-gray-700 border border-gray-300",
+  },
+  "Đã xác nhận": {
+    label: "Đã xác nhận",
+    icon: <CheckCircle className="w-4 h-4" />,
+    className: "bg-blue-100 text-blue-700 border border-blue-300",
+  },
+  "Đang chuẩn bị hàng": {
+    label: "Đang chuẩn bị hàng",
+    icon: <Package className="w-4 h-4" />,
+    className: "bg-indigo-100 text-indigo-700 border border-indigo-300",
+  },
+  "Đang giao hàng": {
+    label: "Đang giao hàng",
+    icon: <Truck className="w-4 h-4" />,
+    className: "bg-yellow-100 text-yellow-800 border border-yellow-300",
+  },
+  "Giao hàng thành công": {
+    label: "Giao hàng thành công",
+    icon: <CheckCheck className="w-4 h-4" />,
+    className: "bg-green-100 text-green-700 border border-green-300",
+  },
+  "Trả hàng/Hoàn tiền": {
+    label: "Trả hàng/Hoàn tiền",
+    icon: <RotateCcw className="w-4 h-4" />,
+    className: "bg-purple-100 text-purple-700 border border-purple-300",
+  },
+};
+
 
 
   // if (loading) {
@@ -104,22 +133,25 @@ function OrderList() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full table-fixed divide-y divide-gray-200">
               <thead className="bg-purple-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                  <th className="px-6 py-4 w-[14%] text-left text-sm font-semibold text-gray-700">
                     Mã đơn hàng
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                  <th className="px-6 py-4 w-[14%] text-left text-sm font-semibold text-gray-700">
                     Ngày đặt
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                  <th className="px-6 py-4 w-[14%] text-left text-sm font-semibold text-gray-700">
                     Tổng tiền
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                  <th className="px-6 py-4 w-[18%] text-left text-sm font-semibold text-gray-700">
                     Trạng thái
                   </th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">
+                  <th className="px-6 py-4 w-[18%] text-left text-sm font-semibold text-gray-700">
+                    Ghi chú
+                  </th>
+                  <th className="px-6 py-4 w-[22%] text-center text-sm font-semibold text-gray-700">
                     Hành động
                   </th>
                 </tr>
@@ -137,8 +169,50 @@ function OrderList() {
                       {order.total.toLocaleString()} đ
                     </td>
                     <td className="px-6 py-4">
-                      {getStatusBadge(order.status)}
+                    {(() => {
+                      const status = ORDER_STATUS_CONFIG[order.status];
+
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${
+                            status?.className ||
+                            "bg-gray-100 text-gray-700 border border-gray-300"
+                          }`}
+                        >
+                          {status?.icon}
+                          {status?.label || order.status}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                    <td className="px-6 py-4 text-sm overflow-hidden">
+                      {order.note ? (
+                        <div className="relative group inline-block">
+                          <button
+                            className="inline-flex items-center gap-1 px-3 py-1 
+                                      rounded-full bg-purple-100 text-purple-700 
+                                      font-semibold text-xs hover:bg-purple-200 transition"
+                          >
+                            <StickyNote className="w-4 h-4" />
+                            Ghi chú
+                          </button>
+
+                          {/* Tooltip */}
+                          <div
+                            className="fixed z-50 hidden group-hover:block 
+                                      mt-2 max-w-xs rounded-lg bg-gray-900 
+                                      text-white text-xs px-3 py-2 shadow-lg"
+                            style={{ transform: "translateY(8px)" }}
+                          >
+                            {order.note}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 italic">—</span>
+                      )}
                     </td>
+
+
                     <td className="px-6 py-4 text-center">
                       <button
                         className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
@@ -147,6 +221,19 @@ function OrderList() {
                         <Eye className="w-4 h-4" />
                         Chi tiết
                       </button>
+
+                      {order.status === "Chờ xử lý" && (
+                        <button
+                          className="inline-flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                          onClick={() => {
+                            setCancelOrderId(order._id);
+                            setShowCancelModal(true);
+                          }}
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Hủy đơn
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -175,7 +262,21 @@ function OrderList() {
                     Trạng thái đơn hàng
                   </h3>
                   <div className="flex justify-center">
-                    {getStatusBadge(selectedOrder.status)}
+                    {(() => {
+                      const status = ORDER_STATUS_CONFIG[selectedOrder.status];
+
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${
+                            status?.className ||
+                            "bg-gray-100 text-gray-700 border border-gray-300"
+                          }`}
+                        >
+                          {status?.icon}
+                          {status?.label || selectedOrder.status}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -203,12 +304,30 @@ function OrderList() {
                         {selectedOrder.shipping_address.address}
                       </p>
                     </div>
-                    {selectedOrder.note && (
-                      <div className="md:col-span-2">
-                        <p className="text-sm text-gray-600">Ghi chú:</p>
-                        <p className="font-medium">{selectedOrder.note}</p>
+                   {selectedOrder.note && (
+                      <div className="md:col-span-2 space-y-2">
+
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-orange-500 mt-0.5" />
+                          <p className="font-medium text-gray-800 break-words">
+                            {selectedOrder.note}
+                          </p>
+                        </div>
+                        {selectedOrder.status === "Đã hủy" && (
+                          <div className="flex items-center gap-2">
+                            <XCircle className="w-4 h-4 text-red-500" />
+                            <p className="text-sm text-gray-600 whitespace-nowrap">
+                              Ngày hủy:
+                            </p>
+                            <p className="font-medium text-gray-800">
+                              {new Date(selectedOrder.updatedAt).toLocaleString("vi-VN")}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
+
+
                   </div>
                 </div>
 
@@ -227,7 +346,7 @@ function OrderList() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Trạng thái:</p>
+                      <p className="text-sm text-gray-600">Trạng thái thanh toán:</p>
                       <p className="font-medium">
                         {selectedOrder.payment.status === "paid"
                           ? "Đã thanh toán"
@@ -305,7 +424,7 @@ function OrderList() {
                 {/* Tổng tiền */}
                 <div className="bg-purple-50 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between text-gray-700">
-                    <span>Tạm tính:</span>
+                    <span>Tổng tiền hàng:</span>
                     <span className="font-medium">
                       {selectedOrder.subtotal.toLocaleString()} đ
                     </span>
@@ -341,6 +460,33 @@ function OrderList() {
           </div>
         )}
       </div>
+     
+        <div className="min-h-screen bg-gray-50 p-6">
+          <div className="max-w-7xl mx-auto">
+            <CancelOrderModal
+              open={showCancelModal}
+              onClose={() => setShowCancelModal(false)}
+              onConfirm={async (note) => {
+                if (!cancelOrderId) return;
+
+                await axios.put(
+                  `${API_BASE_URL}/orders/${cancelOrderId}`,
+                  { note },
+                  {
+                    headers: {
+                      Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                  }
+                );
+
+                setShowCancelModal(false);
+                setCancelOrderId(null);
+                fetchOrders();
+              }}
+            />
+          </div>
+        </div>
+
     </div>
   );
 }

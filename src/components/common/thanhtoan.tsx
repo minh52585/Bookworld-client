@@ -136,7 +136,7 @@ function Thanhtoan() {
         },
         payment: {
           method: paymentMethod,
-          status: paymentMethod === "cod" ? "pending" : "paid",
+          status: "Chưa thanh toán"
         },
          items: cartItems.map((item: any) => ({
           product_id: item.product_id._id,

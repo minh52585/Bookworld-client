@@ -140,7 +140,7 @@ const FavoritesPage: React.FC = () => {
   };
 
   const getProductImage = (p: Product) =>
-    p.images && p.images.length > 0 ? p.images[0] : "/placeholder.jpg";
+    p.images && p.images.length > 0 ? p.images[0] : "";
 
   if (!isAuthenticated) {
     return (
