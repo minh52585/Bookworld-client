@@ -4,7 +4,11 @@ import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "./Auth/LoginModal";
 import { API_BASE_URL } from "../configs/api";
-
+const getErrorMessage = (err: any) =>
+  err?.response?.data?.message ||
+  err?.response?.data?.error ||
+  err?.response?.data?.msg ||
+  "Có lỗi xảy ra, vui lòng thử lại";
 interface Product {
   _id: string;
   name?: string;
@@ -33,7 +37,9 @@ const BookDetailPage: React.FC = () => {
   const [variants, setVariants] = useState<any[]>([]);
   const [category, setCategory] = useState<Category>({});
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
-  const [error, setError] = useState("");
+  const [pageError, setPageError] = useState("");
+  const [cartError, setCartError] = useState("");
+
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
   const [lastViewed, setLastViewed] = useState<Product[]>([]);
@@ -43,6 +49,7 @@ const BookDetailPage: React.FC = () => {
   const [loginMessage, setLoginMessage] = useState<string | null>(null);
   
   const { isAuthenticated } = useAuth();
+ 
 
   // Fetch main product
   useEffect(() => {
@@ -53,7 +60,7 @@ const BookDetailPage: React.FC = () => {
         setVariants(res.data.data.variant || []);
         setCategory(res.data.data.category || []);
       } catch (err) {
-        setError("Không tìm thấy sản phẩm!");
+        setPageError("Không tìm thấy sản phẩm!");
       } finally {
         setLoading(false);
       }
@@ -130,11 +137,13 @@ const BookDetailPage: React.FC = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
   const handleIncrement = () => {
-  if (selectedVariant?.quantity && quantity < selectedVariant.quantity) {
-    setQuantity(quantity + 1);
-  }
+  if (!selectedVariant) return;
+  setCartError("");
+  setQuantity((prev) => {
+    const max = selectedVariant.quantity ?? 1;
+    return prev < max ? prev + 1 : prev;
+  });
 };
-
 
 
   // Product click handler
@@ -152,7 +161,7 @@ const BookDetailPage: React.FC = () => {
   if (!product || !selectedVariant) return;
 
   if (selectedVariant.quantity === 0) {
-    setError("Biến thể này đã hết hàng!");
+    setCartError("Biến thể này đã hết hàng!");
     return;
   }
 
@@ -169,11 +178,14 @@ const BookDetailPage: React.FC = () => {
       }
     );
 
+
     setShowCartNotification(true);
     setTimeout(() => setShowCartNotification(false), 2000);
-  } catch (err) {
-    console.error("Lỗi thêm vào giỏ hàng:", err);
-  }
+    setQuantity(1);
+  } catch (err: any) {
+  const msg = getErrorMessage(err);
+  setCartError(msg);
+}
 };
 
 
@@ -183,8 +195,8 @@ const BookDetailPage: React.FC = () => {
 
   if (loading)
     return <div className="p-10 text-center text-xl">Đang tải...</div>;
-  if (error || !product)
-    return <div className="p-10 text-center text-red-500 text-xl">{error}</div>;
+  if (pageError || !product)
+    return <div className="p-10 text-center text-red-500 text-xl">{pageError}</div>;
 
   return (
     <div className="bg-gray-50">
@@ -307,7 +319,7 @@ const BookDetailPage: React.FC = () => {
                     key={v._id}
                     onClick={() => {
                       setSelectedVariant(v);
-                      // Reset quantity về 1 nếu vượt quá max của variant
+                      setCartError("");
                       setQuantity(prev => (v.quantity && prev > v.quantity ? v.quantity : 1));
                     }}
                     className={`px-4 py-2 border rounded-md font-medium transition
@@ -320,6 +332,7 @@ const BookDetailPage: React.FC = () => {
                   </button>
                 ))}
               </div>
+                 
                 {selectedVariant && selectedVariant.quantity === 0 && (
               <p className="text-red-600 font-semibold mt-2">
                 Loại bìa này đã hết hàng!
@@ -369,7 +382,11 @@ const BookDetailPage: React.FC = () => {
                 )}
 
 
-            
+             {cartError  && (
+                  <p className="text-red-600 font-semibold mt-2">
+                    {cartError }
+                  </p>
+                )}
               
             </div>
 
@@ -377,7 +394,12 @@ const BookDetailPage: React.FC = () => {
             <div className="flex space-x-4 mb-8">
              <button
                 onClick={handleAddToCart}
-                disabled={!selectedVariant || selectedVariant?.quantity === 0}
+                disabled={
+                  !selectedVariant ||
+                  selectedVariant.quantity === 0 ||
+                  quantity > selectedVariant.quantity
+                }
+
                 className={`
                   flex-1 px-8 py-3 rounded-md font-semibold 
                   ${
