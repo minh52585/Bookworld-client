@@ -4,11 +4,7 @@ import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "./Auth/LoginModal";
 import { API_BASE_URL } from "../configs/api";
-const getErrorMessage = (err: any) =>
-  err?.response?.data?.message ||
-  err?.response?.data?.error ||
-  err?.response?.data?.msg ||
-  "Có lỗi xảy ra, vui lòng thử lại";
+
 interface Product {
   _id: string;
   name?: string;
@@ -37,20 +33,27 @@ const BookDetailPage: React.FC = () => {
   const [variants, setVariants] = useState<any[]>([]);
   const [category, setCategory] = useState<Category>({});
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
+
   const [pageError, setPageError] = useState("");
   const [cartError, setCartError] = useState("");
-
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
   const [lastViewed, setLastViewed] = useState<Product[]>([]);
   const [loadingLastViewed, setLoadingLastViewed] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCartNotification, setShowCartNotification] = useState(false);
-  const [loginMessage, setLoginMessage] = useState<string | null>(null);
-  
-  const { isAuthenticated } = useAuth();
- 
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [showFavoriteNotification, setShowFavoriteNotification] =
+    useState(false);
+  const [favoriteMessage, setFavoriteMessage] = useState("");
 
+  const { isAuthenticated } = useAuth();
+
+  const getErrorMessage = (err: any) =>
+    err?.response?.data?.message ||
+    err?.response?.data?.error ||
+    err?.response?.data?.msg ||
+    "Có lỗi xảy ra, vui lòng thử lại";
   // Fetch main product
   useEffect(() => {
     const fetchProduct = async () => {
@@ -67,6 +70,41 @@ const BookDetailPage: React.FC = () => {
     };
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!isAuthenticated || !id) return;
+
+      try {
+        const response = await axios.get(`${API_BASE_URL}/me/favorites`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        let favoritesList: any[] = [];
+        const data = response.data;
+
+        if (Array.isArray(data)) {
+          favoritesList = data;
+        } else if (data.data && Array.isArray(data.data)) {
+          favoritesList = data.data;
+        } else if (data.favorites && Array.isArray(data.favorites)) {
+          favoritesList = data.favorites;
+        }
+
+        const isFav = favoritesList.some(
+          (item) => item.product?._id === id || item.product === id
+        );
+        setIsFavorite(isFav);
+      } catch (error) {
+        console.error("Lỗi khi kiểm tra trạng thái yêu thích:", error);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [isAuthenticated, id]);
+
   useEffect(() => {
     const getRelated = async () => {
       try {
@@ -136,15 +174,15 @@ const BookDetailPage: React.FC = () => {
   const handleDecrement = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
-  const handleIncrement = () => {
-  if (!selectedVariant) return;
-  setCartError("");
-  setQuantity((prev) => {
-    const max = selectedVariant.quantity ?? 1;
-    return prev < max ? prev + 1 : prev;
-  });
-};
 
+  const handleIncrement = () => {
+    if (!selectedVariant) return;
+    setCartError("");
+    setQuantity((prev) => {
+      const max = selectedVariant.quantity ?? 1;
+      return prev < max ? prev + 1 : prev;
+    });
+  };
 
   // Product click handler
   const handleProductClick = (productId: string) => {
@@ -152,42 +190,81 @@ const BookDetailPage: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  //  handleAddToCart
+  // Handle Add to Cart
   const handleAddToCart = async () => {
-  if (!isAuthenticated) {
-    setShowLoginModal(true);
-    return;
-  }
-  if (!product || !selectedVariant) return;
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+    if (!product || !selectedVariant) return;
 
-  if (selectedVariant.quantity === 0) {
-    setCartError("Biến thể này đã hết hàng!");
-    return;
-  }
+    if (selectedVariant.quantity === 0) {
+      setCartError("Biến thể này đã hết hàng!");
+      return;
+    }
 
-  try {
-    await axios.post(
-      `${API_BASE_URL}/cart/items`,
-      { 
-        product_id: product._id,
-        variant_id: selectedVariant._id,
-        quantity: quantity
-      },
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    try {
+      await axios.post(
+        `${API_BASE_URL}/cart/items`,
+        {
+          product_id: product._id,
+          variant_id: selectedVariant._id,
+          quantity: quantity,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      setShowCartNotification(true);
+      setTimeout(() => setShowCartNotification(false), 2000);
+      setQuantity(1);
+    } catch (err: any) {
+      const msg = getErrorMessage(err);
+      setCartError(msg);
+    }
+  };
+
+  // Handle Toggle Favorite
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (!product) return;
+
+    try {
+      if (isFavorite) {
+        await axios.delete(`${API_BASE_URL}/me/favorite/${product._id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setIsFavorite(false);
+        setFavoriteMessage("Đã xóa khỏi yêu thích");
+      } else {
+        await axios.post(
+          `${API_BASE_URL}/me/favorites`,
+          { product_id: product._id },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        setIsFavorite(true);
+        setFavoriteMessage("Đã thêm vào yêu thích");
       }
-    );
 
-
-    setShowCartNotification(true);
-    setTimeout(() => setShowCartNotification(false), 2000);
-    setQuantity(1);
-  } catch (err: any) {
-  const msg = getErrorMessage(err);
-  setCartError(msg);
-}
-};
-
+      setShowFavoriteNotification(true);
+      setTimeout(() => setShowFavoriteNotification(false), 2000);
+    } catch (error: any) {
+      console.error("Favorite error:", error.response?.data);
+      setFavoriteMessage(error.response?.data?.message || "Có lỗi xảy ra");
+      setShowFavoriteNotification(true);
+    }
+  };
 
   const getProductName = (p: Product) => p.name || "Sản phẩm";
   const getProductImage = (p: Product) =>
@@ -196,7 +273,9 @@ const BookDetailPage: React.FC = () => {
   if (loading)
     return <div className="p-10 text-center text-xl">Đang tải...</div>;
   if (pageError || !product)
-    return <div className="p-10 text-center text-red-500 text-xl">{pageError}</div>;
+    return (
+      <div className="p-10 text-center text-red-500 text-xl">{pageError}</div>
+    );
 
   return (
     <div className="bg-gray-50">
@@ -222,6 +301,15 @@ const BookDetailPage: React.FC = () => {
               />
             </svg>
             <span>Đã thêm vào giỏ hàng!</span>
+          </div>
+        </div>
+      )}
+
+      {showFavoriteNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg">
+          <div className="flex items-center space-x-2">
+            <i className="fas fa-heart text-xl"></i>
+            <span>{favoriteMessage}</span>
           </div>
         </div>
       )}
@@ -277,7 +365,9 @@ const BookDetailPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Danh mục: {category.name}
             </h1>
-            <p className="text-lg text-gray-700 mb-4">Tác giả: {product.author}</p>
+            <p className="text-lg text-gray-700 mb-4">
+              Tác giả: {product.author}
+            </p>
             <p className="text-gray-700 mb-6 leading-relaxed">
               Mô tả: {product.description}
             </p>
@@ -308,9 +398,6 @@ const BookDetailPage: React.FC = () => {
               </p>
             )}
 
-
-  
-    
             <div className="mb-6">
               <p className="font-semibold mb-2">Chọn loại bìa:</p>
               <div className="flex gap-3 flex-wrap items-center">
@@ -320,86 +407,87 @@ const BookDetailPage: React.FC = () => {
                     onClick={() => {
                       setSelectedVariant(v);
                       setCartError("");
-                      setQuantity(prev => (v.quantity && prev > v.quantity ? v.quantity : 1));
+                      setQuantity((prev) =>
+                        v.quantity && prev > v.quantity ? v.quantity : 1
+                      );
                     }}
                     className={`px-4 py-2 border rounded-md font-medium transition
-                      ${selectedVariant?._id === v._id 
-                        ? "border-purple-600 text-purple-600 bg-purple-50"
-                        : "border-gray-300 text-gray-700 hover:border-purple-600 hover:text-purple-600"
+                      ${
+                        selectedVariant?._id === v._id
+                          ? "border-purple-600 text-purple-600 bg-purple-50"
+                          : "border-gray-300 text-gray-700 hover:border-purple-600 hover:text-purple-600"
                       }`}
                   >
                     {v.type}
                   </button>
                 ))}
               </div>
-                 
-                {selectedVariant && selectedVariant.quantity === 0 && (
-              <p className="text-red-600 font-semibold mt-2">
-                Loại bìa này đã hết hàng!
-              </p>
-            )}
-
-              {/* Giá */}
-              {selectedVariant && selectedVariant.quantity > 0 &&(
+              {selectedVariant && selectedVariant.quantity === 0 && (
+                <p className="text-red-600 font-semibold mt-2">
+                  Loại bìa này đã hết hàng!
+                </p>
+              )}
+              {cartError && (
+                <p className="text-red-600 font-semibold mt-2">{cartError}</p>
+              )}
+              {selectedVariant && selectedVariant.quantity > 0 && (
                 <p className="text-2xl font-bold text-red-600 mt-4 mb-2">
-                  Đơn giá: {selectedVariant.price?.toLocaleString("vi-VN") ?? "0"} đ
+                  Đơn giá:{" "}
+                  {selectedVariant.price?.toLocaleString("vi-VN") ?? "0"} đ
                 </p>
               )}
 
-              {/* Số lượng tồn kho */}
-              {selectedVariant?.quantity !== undefined &&  (
+              {selectedVariant?.quantity !== undefined && (
                 <p className="text-sm text-gray-600 mb-4">
                   <strong>Còn lại:</strong> {selectedVariant.quantity} cuốn
                 </p>
               )}
 
-              {/* Quantity selector */}
-             
-               {(!selectedVariant || selectedVariant.quantity > 0) && (
-                  <div className="flex items-center space-x-4 mb-8">
-                    <button
-                      onClick={handleDecrement}
-                      disabled={quantity <= 1}
-                      className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
-                        ${quantity <= 1 ? "opacity-50 cursor-not-allowed" : "hover:border-purple-600"}`}
-                    >
-                      <i className="fas fa-minus text-gray-600"></i>
-                    </button>
-
-                    <span className="text-xl font-semibold">{quantity}</span>
-
-                    <button
-                      onClick={handleIncrement}
-                      disabled={!selectedVariant || quantity >= (selectedVariant.quantity || 0)}
-                      className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
-                        ${!selectedVariant || quantity >= (selectedVariant.quantity || 0)
+              {(!selectedVariant || selectedVariant.quantity > 0) && (
+                <div className="flex items-center space-x-4 mb-8">
+                  <button
+                    onClick={handleDecrement}
+                    disabled={quantity <= 1}
+                    className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
+                      ${
+                        quantity <= 1
                           ? "opacity-50 cursor-not-allowed"
-                          : "hover:border-purple-600"}`}
-                    >
-                      <i className="fas fa-plus text-gray-600"></i>
-                    </button>
-                  </div>
-                )}
+                          : "hover:border-purple-600"
+                      }`}
+                  >
+                    <i className="fas fa-minus text-gray-600"></i>
+                  </button>
 
+                  <span className="text-xl font-semibold">{quantity}</span>
 
-             {cartError  && (
-                  <p className="text-red-600 font-semibold mt-2">
-                    {cartError }
-                  </p>
-                )}
-              
+                  <button
+                    onClick={handleIncrement}
+                    disabled={
+                      !selectedVariant ||
+                      quantity >= (selectedVariant.quantity || 0)
+                    }
+                    className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
+                      ${
+                        !selectedVariant ||
+                        quantity >= (selectedVariant.quantity || 0)
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:border-purple-600"
+                      }`}
+                  >
+                    <i className="fas fa-plus text-gray-600"></i>
+                  </button>
+                </div>
+              )}
             </div>
 
-
             <div className="flex space-x-4 mb-8">
-             <button
+              <button
                 onClick={handleAddToCart}
                 disabled={
                   !selectedVariant ||
                   selectedVariant.quantity === 0 ||
                   quantity > selectedVariant.quantity
                 }
-
                 className={`
                   flex-1 px-8 py-3 rounded-md font-semibold 
                   ${
@@ -409,12 +497,23 @@ const BookDetailPage: React.FC = () => {
                   }
                 `}
               >
-                {selectedVariant?.quantity === 0 ? "Hết hàng" : "Thêm vào giỏ hàng"}
+                {selectedVariant?.quantity === 0
+                  ? "Hết hàng"
+                  : "Thêm vào giỏ hàng"}
               </button>
 
-
-              <button className="px-8 py-3 border border-gray-300 rounded-md hover:border-purple-600 hover:text-purple-600">
-                Yêu thích
+              <button
+                onClick={handleToggleFavorite}
+                className={`px-8 py-3 border-2 rounded-md font-semibold transition ${
+                  isFavorite
+                    ? "border-red-500 text-red-500 bg-red-50 hover:bg-red-100"
+                    : "border-gray-300 text-gray-700 hover:border-purple-600 hover:text-purple-600"
+                }`}
+              >
+                <i
+                  className={`${isFavorite ? "fas" : "far"} fa-heart mr-2`}
+                ></i>
+                {isFavorite ? "Đã yêu thích" : "Yêu thích"}
               </button>
             </div>
           </div>
@@ -456,9 +555,6 @@ const BookDetailPage: React.FC = () => {
                   {getProductName(item)}
                 </h3>
                 <p className="text-sm text-gray-600 mb-2">{item.author}</p>
-                <p className="text-red-500 font-bold">
-                  
-                </p>
               </div>
             ))}
           </div>
@@ -502,9 +598,7 @@ const BookDetailPage: React.FC = () => {
                   </h3>
                   <p className="text-sm text-gray-600 mb-2">{item.author}</p>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-lg font-bold text-red-600">
-                  
-                    </span>
+                    <span className="text-lg font-bold text-red-600"></span>
                     <button
                       className="text-gray-400 hover:text-purple-600"
                       onClick={(e) => {

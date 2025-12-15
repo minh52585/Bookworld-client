@@ -64,20 +64,11 @@ const FavoritesPage: React.FC = () => {
         },
       });
 
-      let favoritesList: FavoriteItem[] = [];
-      const data = response.data;
+      console.log(" Favorites API:", response.data);
 
-      if (Array.isArray(data)) {
-        favoritesList = data;
-      } else if (data.data && Array.isArray(data.data)) {
-        favoritesList = data.data;
-      } else if (data.favorites && Array.isArray(data.favorites)) {
-        favoritesList = data.favorites;
-      }
-
-      setFavorites(favoritesList);
-    } catch (error) {
-      console.error("Lỗi khi tải danh sách yêu thích:", error);
+      setFavorites(response.data);
+    } catch (error: any) {
+      console.error("Lỗi khi tải danh sách yêu thích:", error.response?.data);
       showNotification("Không thể tải danh sách yêu thích", "error");
     } finally {
       setLoading(false);
@@ -92,7 +83,7 @@ const FavoritesPage: React.FC = () => {
         },
       });
 
-      setFavorites(favorites.filter((item) => item.product._id !== productId));
+      setFavorites(favorites.filter((item) => item.product?._id !== productId));
       showNotification("Đã xóa khỏi danh sách yêu thích", "success");
     } catch (error) {
       console.error("Lỗi khi xóa sản phẩm yêu thích:", error);
@@ -139,8 +130,13 @@ const FavoritesPage: React.FC = () => {
     }, 3000);
   };
 
-  const getProductImage = (p: Product) =>
-    p.images && p.images.length > 0 ? p.images[0] : "";
+  const getProductImage = (p: Product | null | undefined) => {
+    if (!p)
+      return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="400"%3E%3Crect width="300" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+    return p.images && p.images.length > 0
+      ? p.images[0]
+      : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="400"%3E%3Crect width="300" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+  };
 
   if (!isAuthenticated) {
     return (
@@ -265,136 +261,141 @@ const FavoritesPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {favorites.map((item) => (
-              <div
-                key={item._id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-              >
-                {/* Product Image */}
+            {favorites.map((item) => {
+              // Safety check
+              if (!item.product) return null;
+
+              return (
                 <div
-                  className="relative cursor-pointer group"
-                  onClick={() => handleProductClick(item.product._id)}
+                  key={item._id}
+                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
                 >
-                  <img
-                    src={getProductImage(item.product)}
-                    alt={item.product.name}
-                    className="w-full h-80 object-cover group-hover:opacity-90 transition"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src =
-                        'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="400"%3E%3Crect width="300" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
-                  {/* Remove Button Overlay */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveFavorite(item.product._id);
-                    }}
-                    className="absolute top-3 left-3 bg-white text-red-500 p-3 rounded-full shadow-lg hover:bg-red-500 hover:text-white transition opacity-0 group-hover:opacity-100"
-                  >
-                    <i className="fas fa-heart text-xl"></i>
-                  </button>
-                </div>
-
-                {/* Product Info */}
-                <div className="p-5">
-                  {/* Category */}
-                  {item.product.category && (
-                    <div className="mb-2">
-                      <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
-                        {item.product.category.name}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Title */}
-                  <h3
-                    className="font-bold text-gray-900 mb-2 line-clamp-2 hover:text-purple-600 cursor-pointer text-lg"
+                  {/* Product Image */}
+                  <div
+                    className="relative cursor-pointer group"
                     onClick={() => handleProductClick(item.product._id)}
                   >
-                    {item.product.name}
-                  </h3>
-
-                  {/* Author */}
-                  <p className="text-sm text-gray-600 mb-1">
-                    {item.product.author}
-                  </p>
-
-                  {/* Publisher & Year */}
-                  <p className="text-xs text-gray-500 mb-3">
-                    {item.product.nhaxuatban} • {item.product.namxuatban}
-                  </p>
-
-                  {/* Price */}
-                  <div className="mb-3">
-                    <span className="text-2xl font-bold text-red-600">
-                      {item.product.price.toLocaleString("vi-VN")}₫
-                    </span>
+                    <img
+                      src={getProductImage(item.product)}
+                      alt={item.product.name || "Product"}
+                      className="w-full h-80 object-cover group-hover:opacity-90 transition"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src =
+                          'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="400"%3E%3Crect width="300" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                    {/* Remove Button Overlay */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveFavorite(item.product._id);
+                      }}
+                      className="absolute top-3 left-3 bg-white text-red-500 p-3 rounded-full shadow-lg hover:bg-red-500 hover:text-white transition opacity-0 group-hover:opacity-100"
+                    >
+                      <i className="fas fa-heart text-xl"></i>
+                    </button>
                   </div>
 
-                  {/* Stock Status */}
-                  <div className="mb-4">
-                    {item.product.quantity > 0 ? (
-                      <span className="text-sm text-green-600 flex items-center">
-                        <i className="fas fa-check-circle mr-1"></i>
-                        Còn {item.product.quantity} sản phẩm
-                      </span>
-                    ) : (
-                      <span className="text-sm text-red-600 flex items-center">
-                        <i className="fas fa-times-circle mr-1"></i>
-                        Hết hàng
-                      </span>
+                  {/* Product Info */}
+                  <div className="p-5">
+                    {/* Category */}
+                    {item.product.category && (
+                      <div className="mb-2">
+                        <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
+                          {item.product.category.name}
+                        </span>
+                      </div>
                     )}
-                  </div>
 
-                  {/* Product Details */}
-                  <div className="mb-4 text-xs text-gray-600 space-y-1">
-                    <div className="flex items-center">
-                      <i className="fas fa-book-open w-4 mr-2"></i>
-                      <span>{item.product.sotrang} trang</span>
+                    {/* Title */}
+                    <h3
+                      className="font-bold text-gray-900 mb-2 line-clamp-2 hover:text-purple-600 cursor-pointer text-lg"
+                      onClick={() => handleProductClick(item.product._id)}
+                    >
+                      {item.product.name || "Không có tên"}
+                    </h3>
+
+                    {/* Author */}
+                    <p className="text-sm text-gray-600 mb-1">
+                      {item.product.author || "Không rõ tác giả"}
+                    </p>
+
+                    {/* Publisher & Year */}
+                    <p className="text-xs text-gray-500 mb-3">
+                      {item.product.nhaxuatban || "N/A"} •{" "}
+                      {item.product.namxuatban || "N/A"}
+                    </p>
+
+                    <div className="mb-3">
+                      <span className="text-sm text-gray-500 italic">
+                        Vui lòng chọn loại bìa để xem giá
+                      </span>
                     </div>
-                    {item.product.size && (
-                      <div className="flex items-center">
-                        <i className="fas fa-ruler-combined w-4 mr-2"></i>
-                        <span>{item.product.size}</span>
-                      </div>
-                    )}
-                    {item.product.weight > 0 && (
-                      <div className="flex items-center">
-                        <i className="fas fa-weight w-4 mr-2"></i>
-                        <span>{item.product.weight}g</span>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleAddToCart(item.product._id)}
-                      disabled={item.product.quantity === 0}
-                      className={`flex-1 py-2.5 rounded-lg font-semibold transition ${
-                        item.product.quantity === 0
-                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                          : "bg-purple-600 text-white hover:bg-purple-700"
-                      }`}
-                    >
-                      <i className="fas fa-shopping-cart mr-2"></i>
-                      {item.product.quantity === 0
-                        ? "Hết hàng"
-                        : "Thêm vào giỏ"}
-                    </button>
-                    <button
-                      onClick={() => handleRemoveFavorite(item.product._id)}
-                      className="px-4 py-2.5 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"
-                      title="Xóa khỏi yêu thích"
-                    >
-                      <i className="fas fa-trash-alt"></i>
-                    </button>
+                    {/* Stock Status */}
+                    <div className="mb-4">
+                      {item.product.quantity > 0 ? (
+                        <span className="text-sm text-green-600 flex items-center">
+                          <i className="fas fa-check-circle mr-1"></i>
+                          Còn {item.product.quantity} sản phẩm
+                        </span>
+                      ) : (
+                        <span className="text-sm text-red-600 flex items-center">
+                          <i className="fas fa-times-circle mr-1"></i>
+                          Hết hàng
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Product Details */}
+                    <div className="mb-4 text-xs text-gray-600 space-y-1">
+                      <div className="flex items-center">
+                        <i className="fas fa-book-open w-4 mr-2"></i>
+                        <span>{item.product.sotrang || 0} trang</span>
+                      </div>
+                      {item.product.size && (
+                        <div className="flex items-center">
+                          <i className="fas fa-ruler-combined w-4 mr-2"></i>
+                          <span>{item.product.size}</span>
+                        </div>
+                      )}
+                      {item.product.weight > 0 && (
+                        <div className="flex items-center">
+                          <i className="fas fa-weight w-4 mr-2"></i>
+                          <span>{item.product.weight}g</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAddToCart(item.product._id)}
+                        disabled={item.product.quantity === 0}
+                        className={`flex-1 py-2.5 rounded-lg font-semibold transition ${
+                          item.product.quantity === 0
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-purple-600 text-white hover:bg-purple-700"
+                        }`}
+                      >
+                        <i className="fas fa-shopping-cart mr-2"></i>
+                        {item.product.quantity === 0
+                          ? "Hết hàng"
+                          : "Thêm vào giỏ"}
+                      </button>
+                      <button
+                        onClick={() => handleRemoveFavorite(item.product._id)}
+                        className="px-4 py-2.5 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"
+                        title="Xóa khỏi yêu thích"
+                      >
+                        <i className="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -413,7 +414,7 @@ const FavoritesPage: React.FC = () => {
                 <i className="fas fa-book text-purple-600 text-4xl mb-3"></i>
                 <h3 className="text-3xl font-bold text-gray-900 mb-1">
                   {favorites.reduce(
-                    (total, item) => total + item.product.quantity,
+                    (total, item) => total + (item.product?.quantity || 0),
                     0
                   )}
                 </h3>
@@ -423,7 +424,10 @@ const FavoritesPage: React.FC = () => {
                 <i className="fas fa-money-bill-wave text-green-600 text-4xl mb-3"></i>
                 <h3 className="text-3xl font-bold text-gray-900 mb-1">
                   {favorites
-                    .reduce((total, item) => total + item.product.price, 0)
+                    .reduce(
+                      (total, item) => total + (item.product?.price || 0),
+                      0
+                    )
                     .toLocaleString("vi-VN")}
                   ₫
                 </h3>
