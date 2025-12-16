@@ -137,7 +137,7 @@ const BookDetailPage: React.FC = () => {
           const promises = viewedIds.slice(0, 4).map((productId: string) =>
             axios
               .get(`${API_BASE_URL}/products/${productId}`)
-              .then((res) => res.data.data)
+              .then((res) => res.data.data.product)
               .catch(() => null)
           );
           const products = await Promise.all(promises);
@@ -160,15 +160,19 @@ const BookDetailPage: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    if (product && id) {
-      const viewedIds = JSON.parse(localStorage.getItem("lastViewed") || "[]");
-      const newViewed = [
-        id,
-        ...viewedIds.filter((vid: string) => vid !== id),
-      ].slice(0, 10);
-      localStorage.setItem("lastViewed", JSON.stringify(newViewed));
-    }
-  }, [product, id]);
+    if (!product?._id) return;
+
+    const viewedIds: string[] = JSON.parse(
+      localStorage.getItem("lastViewed") || "[]"
+    );
+
+    const newViewed = [
+      product._id,
+      ...viewedIds.filter((vid) => vid !== product._id),
+    ].slice(0, 10);
+
+    localStorage.setItem("lastViewed", JSON.stringify(newViewed));
+  }, [product]);
 
   // Quantity handlers
   const handleDecrement = () => {
