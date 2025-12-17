@@ -91,32 +91,8 @@ const FavoritesPage: React.FC = () => {
     }
   };
 
-  const handleAddToCart = async (productId: string) => {
-    if (!isAuthenticated) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    try {
-      await axios.post(
-        `${API_BASE_URL}/cart/items`,
-        {
-          product_id: productId,
-          quantity: 1,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      setShowCartNotification(true);
-      setTimeout(() => setShowCartNotification(false), 2000);
-    } catch (error) {
-      console.error("Lỗi thêm vào giỏ hàng:", error);
-      showNotification("Không thể thêm vào giỏ hàng", "error");
-    }
+  const handleViewDetail = (productId: string) => {
+    navigate(`/products/${productId}`);
   };
 
   const handleProductClick = (productId: string) => {
@@ -371,18 +347,11 @@ const FavoritesPage: React.FC = () => {
                     {/* Action Buttons */}
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleAddToCart(item.product._id)}
-                        disabled={item.product.quantity === 0}
-                        className={`flex-1 py-2.5 rounded-lg font-semibold transition ${
-                          item.product.quantity === 0
-                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            : "bg-purple-600 text-white hover:bg-purple-700"
-                        }`}
+                        onClick={() => handleViewDetail(item.product._id)}
+                        className="flex-1 py-2.5 rounded-lg font-semibold bg-purple-600 text-white hover:bg-purple-700 transition"
                       >
-                        <i className="fas fa-shopping-cart mr-2"></i>
-                        {item.product.quantity === 0
-                          ? "Hết hàng"
-                          : "Thêm vào giỏ"}
+                        <i className="fas fa-eye mr-2"></i>
+                        Xem chi tiết & mua
                       </button>
                       <button
                         onClick={() => handleRemoveFavorite(item.product._id)}

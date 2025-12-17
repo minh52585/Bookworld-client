@@ -4,8 +4,6 @@ import axios from "axios";
 import { useAuth } from "../../contexts/AuthContext";
 import { API_BASE_URL } from "../../configs/api";
 
-
-
 const Header = () => {
   const [openUserMenu, setOpenUserMenu] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
@@ -18,9 +16,8 @@ const Header = () => {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
 
-
   let searchTimeout: any;
-// danh muc
+  // danh muc
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -55,46 +52,46 @@ const Header = () => {
 
   //search
   // ====================================================
-// SEARCH REALTIME — DÙNG CLIENT-SIDE GIỐNG SEARCHPAGE
-// ====================================================
-const removeVietnameseTones = (str: string) => {
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D");
-};
+  // SEARCH REALTIME — DÙNG CLIENT-SIDE GIỐNG SEARCHPAGE
+  // ====================================================
+  const removeVietnameseTones = (str: string) => {
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D");
+  };
 
-const fetchSearch = async (text: string) => {
-  clearTimeout(searchTimeout);
-  setSearchText(text);
+  const fetchSearch = async (text: string) => {
+    clearTimeout(searchTimeout);
+    setSearchText(text);
 
-  if (!text.trim()) {
-    setSearchResults([]);
-    setShowDropdown(false);
-    return;
-  }
-
-  setLoading(true);
-
-  searchTimeout = setTimeout(async () => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/products`);
-      const all = res.data?.data || [];
-      const q = removeVietnameseTones(text.toLowerCase().trim());
-      const filtered = all.filter((p: any) =>
-        removeVietnameseTones(p.title.toLowerCase()).includes(q)
-      );
-
-      setSearchResults(filtered);
-      setShowDropdown(true);
-    } catch (err) {
-      console.error("Search realtime error:", err);
-    } finally {
-      setLoading(false);
+    if (!text.trim()) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
     }
-  }, 300);
-};
+
+    setLoading(true);
+
+    searchTimeout = setTimeout(async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/products`);
+        const all = res.data?.data || [];
+        const q = removeVietnameseTones(text.toLowerCase().trim());
+        const filtered = all.filter((p: any) =>
+          removeVietnameseTones(p.title.toLowerCase()).includes(q)
+        );
+
+        setSearchResults(filtered);
+        setShowDropdown(true);
+      } catch (err) {
+        console.error("Search realtime error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  };
 
   const handleSearchSubmit = (e: any) => {
     e.preventDefault();
@@ -190,16 +187,30 @@ const fetchSearch = async (text: string) => {
 
         {/* right menu */}
         <div className="flex items-center space-x-6 text-gray-600 relative">
-          <a href="#" className="hover:text-purple-600">Chính sách bảo mật</a>
-          <a href="#" className="hover:text-purple-600">Bảo hành</a>
-          <a href="#" className="hover:text-purple-600">Vận chuyển</a>
-          <a href="#" className="hover:text-purple-600">Trả hàng</a>
+          <a href="#" className="hover:text-purple-600">
+            Chính sách bảo mật
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Bảo hành
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Vận chuyển
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Trả hàng
+          </a>
 
-          <Link to="/cart" className="text-purple-600 text-xl hover:text-purple-700">
+          <Link
+            to="/cart"
+            className="text-purple-600 text-xl hover:text-purple-700"
+          >
             <i className="fas fa-shopping-cart"></i>
           </Link>
 
-          <a href="#" className="text-purple-600 text-xl hover:text-purple-700">
+          <a
+            href="/favorite"
+            className="text-purple-600 text-xl hover:text-purple-700"
+          >
             <i className="fas fa-heart"></i>
           </a>
           <div className="relative" ref={userMenuRef}>
@@ -258,7 +269,9 @@ const fetchSearch = async (text: string) => {
       <div className="flex items-center justify-between px-6 py-3 border-b-2 border-purple-200 bg-white">
         <div className="flex items-center space-x-6 text-gray-700">
           <div className="relative group">
-            <span className="hover:text-purple-600 cursor-pointer">Sách nên đọc</span>
+            <span className="hover:text-purple-600 cursor-pointer">
+              Sách nên đọc
+            </span>
 
             <div
               className="absolute left-0 mt-3 w-56 bg-purple-800 text-white rounded-lg 
@@ -277,15 +290,26 @@ const fetchSearch = async (text: string) => {
             </div>
           </div>
 
-          <a href="#" className="hover:text-purple-600">Tin tức</a>
-          <a href="#" className="hover:text-purple-600">Khuyến mãi tháng</a>
-          <a href="#" className="hover:text-purple-600">Nhà xuất bản</a>
-          <a href="#" className="hover:text-purple-600">Đăng ký nhận tin</a>
+          <a href="#" className="hover:text-purple-600">
+            Tin tức
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Khuyến mãi tháng
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Nhà xuất bản
+          </a>
+          <a href="#" className="hover:text-purple-600">
+            Đăng ký nhận tin
+          </a>
         </div>
 
         <div className="flex items-center space-x-4">
           <span className="text-purple-600">
-            <i className="fas fa-phone-alt mr-1" style={{ transform: "scaleX(-1)" }} />
+            <i
+              className="fas fa-phone-alt mr-1"
+              style={{ transform: "scaleX(-1)" }}
+            />
             +84 445 87 999 000
           </span>
 

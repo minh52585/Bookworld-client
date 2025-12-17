@@ -32,16 +32,20 @@ function Thanhtoan() {
       return;
     }
 
-    if (selectedItems.length === 0) {
-      alert("Vui lòng chọn sản phẩm để thanh toán!");
-      navigate("/cart");
+    // ❗ KHÔNG CÓ selectedItems → CẤM VÀO CHECKOUT
+    if (!location.state || !location.state.selectedItems) {
+      navigate("/cart", { replace: true });
       return;
     }
 
-    // Sử dụng selectedItems
+    if (selectedItems.length === 0) {
+      navigate("/cart", { replace: true });
+      return;
+    }
+
     setCartItems(selectedItems);
     fetchUserInfo();
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated]);
 
   const fetchUserInfo = async () => {
     try {
@@ -175,32 +179,24 @@ function Thanhtoan() {
       if (response.data.success) {
         alert("Đặt hàng thành công!");
 
-        // Xóa sản phẩm đã đặt khỏi giỏ hàng
+        setCartItems([]);
+
         try {
           await axios.post(
             `${API_BASE_URL}/cart/items/clear-selected`,
             {
-              items: cartItems
-                .filter((item) => item.product_id)
-                .map((item: any) => ({
-                  product_id: item.product_id._id,
-                  variant_id: item.variant_id?._id || null,
-                })),
+              items: cartItems.map((item: any) => ({
+                product_id: item.product_id._id,
+                variant_id: item.variant_id?._id || null,
+              })),
             },
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
+            { headers: { Authorization: `Bearer ${token}` } }
           );
-          console.log("🗑️ Đã xóa sản phẩm khỏi giỏ hàng");
-        } catch (err: any) {
-          console.log(
-            "⚠️ Không thể xóa giỏ hàng:",
-            err.response?.data || err.message
-          );
+        } catch (err) {
+          console.warn("Không thể clear cart:", err);
         }
 
-        // Chuyển đến trang đơn hàng
-        navigate("/order");
+        navigate("/order", { replace: true });
       } else {
         alert(
           "Đặt hàng thất bại: " +
