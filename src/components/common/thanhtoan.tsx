@@ -1,23 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { ShoppingCart, Trash } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
 import axios from "axios";
 import { API_BASE_URL } from "../../configs/api";
-
 import { useLocation } from "react-router-dom";
-
-
 
 function Thanhtoan() {
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   const selectedItems = location.state?.selectedItems || [];
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -32,36 +31,17 @@ function Thanhtoan() {
       setShowLoginModal(true);
       return;
     }
+
+    if (selectedItems.length === 0) {
+      alert("Vui lòng chọn sản phẩm để thanh toán!");
+      navigate("/cart");
+      return;
+    }
+
+    // Sử dụng selectedItems
+    setCartItems(selectedItems);
     fetchUserInfo();
-    fetchCart();
-  }, [isAuthenticated]);
-
-  // Lấy giỏ hàng từ API
-  const fetchCart = async () => {
-  try {
-    const res = await axios.get(`${API_BASE_URL}/cart`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-
-    const allItems = res.data.data?.items || [];
-
-    // Convert selectedItems từ object sang key dạng string để so sánh
-    const selectedKeys = selectedItems.map((s: any) =>
-      s.product_id._id + (s.variant_id?._id || "null")
-    );
-
-    const filtered = allItems.filter((item: any) => {
-      const key = item.product_id._id + (item.variant_id?._id || "null");
-      return selectedKeys.includes(key);
-    });
-
-    setCartItems(filtered);
-  } catch (err) {
-    console.error("Lỗi lấy giỏ hàng:", err);
-  }
-  setLoading(false);
-};
-
+  }, [isAuthenticated, navigate]);
 
   const fetchUserInfo = async () => {
     try {
@@ -79,7 +59,6 @@ function Thanhtoan() {
     }
   };
 
-  // Xử lý input form
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -87,18 +66,15 @@ function Thanhtoan() {
     setFormData({ ...formData, [name]: value });
   };
 
-  // Xóa sản phẩm
-
-
   // Tính tổng tiền
   const total = cartItems.reduce((sum, item) => {
-  const price = item.variant_id?.price ?? item.product_id.price;
-  return sum + price * item.quantity;
-}, 0);
+    if (!item.product_id) return sum;
+    const price = item.variant_id?.price ?? item.product_id?.price ?? 0;
+    return sum + price * item.quantity;
+  }, 0);
 
   const phiShip = 30000;
 
-  // Xử lý đặt hàng
   const handleSubmitOrder = async () => {
     // Validate form
     if (
@@ -116,18 +92,43 @@ function Thanhtoan() {
       return;
     }
 
-    // Kiểm tra token
-    const token = localStorage.getItem("token");
-    console.log("Token:", token ? "Có token" : "Không có token");
+    // Kiểm tra số lượng tồn kho trước khi đặt hàng
+    const invalidItems = cartItems.filter((item) => {
+      if (!item.product_id) return false;
+      const availableQty =
+        item.variant_id?.quantity ?? item.product_id?.quantity ?? 0;
+      return item.quantity > availableQty;
+    });
 
+    if (invalidItems.length > 0) {
+      const itemNames = invalidItems
+        .map((item) => {
+          const variantInfo = item.variant_id
+            ? ` (${item.variant_id.type})`
+            : "";
+          const availableQty =
+            item.variant_id?.quantity ?? item.product_id?.quantity ?? 0;
+          return `- ${item.product_id.name}${variantInfo}: Bạn đặt ${item.quantity}, chỉ còn ${availableQty}`;
+        })
+        .join("\n");
+
+      alert(
+        `Các sản phẩm sau không đủ số lượng:\n\n${itemNames}\n\nVui lòng giảm số lượng hoặc xóa khỏi giỏ hàng!`
+      );
+      return;
+    }
+
+    const token = localStorage.getItem("token");
     if (!token) {
       alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
       navigate("/login");
       return;
     }
 
+    setLoading(true);
+
     try {
-      // Tạo đơn hàng
+      // Chuẩn bị dữ liệu đơn hàng
       const orderData = {
         shipping_address: {
           name: formData.fullName,
@@ -136,16 +137,18 @@ function Thanhtoan() {
         },
         payment: {
           method: paymentMethod,
-          status: "Chưa thanh toán"
+          status: "Chưa thanh toán",
         },
-         items: cartItems.map((item: any) => ({
-          product_id: item.product_id._id,
-          variant_id: item.variant_id?._id || null,
-          name: item.product_id.name,
-          price: item.variant_id?.price ?? item.product_id.price,
-          quantity: item.quantity,
-          image: item.product_id.images?.[0] || "",
-        })),
+        items: cartItems
+          .filter((item) => item.product_id) // Lọc item hợp lệ
+          .map((item: any) => ({
+            product_id: item.product_id._id,
+            variant_id: item.variant_id?._id || null,
+            name: item.product_id.name,
+            price: item.variant_id?.price ?? item.product_id.price,
+            quantity: item.quantity,
+            image: item.product_id.images?.[0] || "",
+          })),
         subtotal: total,
         shipping_fee: phiShip,
         discount: {
@@ -156,8 +159,9 @@ function Thanhtoan() {
         note: "",
       };
 
-      console.log("Đang gửi đơn hàng:", orderData);
-      console.log("API URL:", `${API_BASE_URL}/orders`);
+      console.log("📦 Đang gửi đơn hàng:", orderData);
+      console.log("🌐 API URL:", `${API_BASE_URL}/orders`);
+      console.log("🔑 Token:", token ? "Có" : "Không có");
 
       const response = await axios.post(`${API_BASE_URL}/orders`, orderData, {
         headers: {
@@ -166,57 +170,77 @@ function Thanhtoan() {
         },
       });
 
-      console.log("Response:", response.data);
+      console.log("✅ Response từ server:", response.data);
 
       if (response.data.success) {
         alert("Đặt hàng thành công!");
 
-        // Xóa giỏ hàng sau khi đặt hàng thành công
+        // Xóa sản phẩm đã đặt khỏi giỏ hàng
         try {
           await axios.post(
-          `${API_BASE_URL}/cart/items/clear-selected`,
-          {
-            items: cartItems.map((item: any) => ({
-              product_id: item.product_id._id,
-              variant_id: item.variant_id?._id || null,
-            })),
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
+            `${API_BASE_URL}/cart/items/clear-selected`,
+            {
+              items: cartItems
+                .filter((item) => item.product_id)
+                .map((item: any) => ({
+                  product_id: item.product_id._id,
+                  variant_id: item.variant_id?._id || null,
+                })),
+            },
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          console.log("🗑️ Đã xóa sản phẩm khỏi giỏ hàng");
         } catch (err: any) {
-          console.log("Không thể xóa giỏ hàng:", err.response?.data || err.message);
+          console.log(
+            "⚠️ Không thể xóa giỏ hàng:",
+            err.response?.data || err.message
+          );
         }
 
-
-        // Chuyển đến trang danh sách đơn hàng
+        // Chuyển đến trang đơn hàng
         navigate("/order");
       } else {
-            console.log(response.data.message);
-        // alert(
-        //   "Đặt hàng thất bại: " +
-        //     (newFunction(response) || "Lỗi không xác định")
-        // );
+        alert(
+          "Đặt hàng thất bại: " +
+            (response.data.message || "Lỗi không xác định")
+        );
       }
     } catch (error: any) {
-      console.error("Chi tiết lỗi:", {
+      console.error("❌ Chi tiết lỗi:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
+        url: error.config?.url,
       });
 
-      const errorMsg =
-        error.response?.data?.message || "Đặt hàng thất bại. Vui lòng thử lại!";
-      alert("" + errorMsg);
+      let errorMsg = "Đặt hàng thất bại. Vui lòng thử lại!";
 
-      // Nếu lỗi xác thực, chuyển về trang đăng nhập
-      if (error.response?.status === 401) {
-        console.log("Token hết hạn, chuyển về trang đăng nhập");
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message.includes("Network Error")
+      ) {
+        errorMsg =
+          "Không thể kết nối đến server. Vui lòng kiểm tra backend đã chạy chưa.";
+      } else if (error.response?.status === 401) {
+        errorMsg = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
         localStorage.removeItem("token");
         navigate("/login");
+      } else if (
+        error.response?.status === 400 &&
+        error.response?.data?.message?.includes("không đủ số lượng")
+      ) {
+        errorMsg =
+          error.response.data.message +
+          "\n\nVui lòng quay lại giỏ hàng và giảm số lượng!";
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
       }
+
+      alert(errorMsg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -230,16 +254,8 @@ function Thanhtoan() {
       <LoginModal
         isOpen={showLoginModal}
         onClose={handleCloseLoginModal}
-        onLoginSuccess={fetchCart}
+        onLoginSuccess={() => {}}
       />
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-xl text-gray-600">Đang tải...</div>
-      </div>
     );
   }
 
@@ -247,6 +263,7 @@ function Thanhtoan() {
     <div className="bg-gradient-to-br from-purple-50 to-pink-50 py-8 px-4 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* FORM THÔNG TIN */}
           <div className="bg-white shadow-lg rounded-xl p-8 lg:col-span-2">
             <h2 className="text-2xl font-bold text-purple-600 flex items-center gap-2 mb-6">
               <ShoppingCart /> Thông Tin Giao Hàng
@@ -336,12 +353,18 @@ function Thanhtoan() {
 
             <button
               onClick={handleSubmitOrder}
-              className="w-full bg-purple-600 text-white p-4 rounded-lg font-bold hover:bg-purple-700 transition mt-6"
+              disabled={loading}
+              className={`w-full p-4 rounded-lg font-bold transition mt-6 ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-purple-600 text-white hover:bg-purple-700"
+              }`}
             >
-              Xác Nhận Đặt Hàng
+              {loading ? "Đang xử lý..." : "Xác Nhận Đặt Hàng"}
             </button>
           </div>
 
+          {/* THÔNG TIN ĐƠN HÀNG */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <h2 className="text-2xl font-bold text-purple-600 mb-6">
               Thông tin đặt hàng
@@ -355,55 +378,59 @@ function Thanhtoan() {
             ) : (
               <>
                 {cartItems.map((item: any) => {
-                    const product = item.product_id;
-                    const variant = item.variant_id;
-                    const key = product._id + (variant?._id || "");
-                    
-                    const price = variant?.price ?? product.price;
-                    const totalPrice = price * item.quantity;
+                  const product = item.product_id;
+                  if (!product) return null;
 
-                    return (
-                      <div
-                        key={key}
-                        className="flex items-center gap-3 mb-6 border-b pb-4"
-                      >
-                        {/* ẢNH SẢN PHẨM */}
-                        <img
-                          src={product.images?.[0] || "https://via.placeholder.com/60"}
-                          className="w-16 h-16 object-cover rounded-lg"
-                          alt={product.name}
-                        />
+                  const variant = item.variant_id;
+                  const key = product._id + (variant?._id || "");
+                  const price = variant?.price ?? product.price ?? 0;
+                  const totalPrice = price * item.quantity;
 
-                        {/* THÔNG TIN SẢN PHẨM */}
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-800">{product.name}</p>
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center gap-3 mb-6 border-b pb-4"
+                    >
+                      <img
+                        src={
+                          product.images?.[0] ||
+                          "https://via.placeholder.com/60"
+                        }
+                        className="w-16 h-16 object-cover rounded-lg"
+                        alt={product.name}
+                      />
 
-                          {/* LOẠI BÌA (VARIANT) */}
-                          {variant && (
-                            <p className="text-sm text-gray-700">
-                              Loại bìa: <span className="font-medium">{variant.type}</span>
-                            </p>
-                          )}
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-800">
+                          {product.name}
+                        </p>
 
-                          <p className="text-sm text-gray-600">
-                            Số lượng: <span className="font-medium">x{item.quantity}</span>
+                        {variant && (
+                          <p className="text-sm text-gray-700">
+                            Loại bìa:{" "}
+                            <span className="font-medium">{variant.type}</span>
                           </p>
+                        )}
 
-                          <p className="text-sm text-gray-600">
-                            Đơn giá: <span className="font-medium">{price.toLocaleString()}đ</span>
-                          </p>
+                        <p className="text-sm text-gray-600">
+                          Số lượng:{" "}
+                          <span className="font-medium">x{item.quantity}</span>
+                        </p>
 
-                          <p className="font-bold text-purple-600 text-lg">
-                            Tổng: {totalPrice.toLocaleString()}đ
-                          </p>
-                        </div>
+                        <p className="text-sm text-gray-600">
+                          Đơn giá:{" "}
+                          <span className="font-medium">
+                            {price.toLocaleString()}đ
+                          </span>
+                        </p>
 
-                      
+                        <p className="font-bold text-purple-600 text-lg">
+                          Tổng: {totalPrice.toLocaleString()}đ
+                        </p>
                       </div>
-                    );
-                  })}
-
-
+                    </div>
+                  );
+                })}
 
                 <div className="border-t pt-4 space-y-3">
                   <div className="flex justify-between text-gray-700">
@@ -435,7 +462,3 @@ function Thanhtoan() {
 }
 
 export default Thanhtoan;
-function newFunction(response) {
-  return response.data.message;
-}
-

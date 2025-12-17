@@ -42,135 +42,138 @@ function Cart() {
   };
 
   const getMaxQuantity = (item: CartItem) => {
-    return item.variant_id?.quantity ?? item.product_id.quantity ?? 99;
+    return item.variant_id?.quantity ?? item.product_id?.quantity ?? 99;
   };
 
-  const increaseQuantity = async (productId: string, variantId: string | null) => {
-  const item = cartItems.find(
-    (i) =>
-      i.product_id?._id === productId &&
-      (i.variant_id?._id || null) === variantId
-  );
-
-  if (!item) return;
-  const newQty = item.quantity + 1;
-
-  // Cập nhật FE trước
-  setCartItems((prev) =>
-    prev.map((i) =>
-      i.product_id?._id === productId &&
-      (i.variant_id?._id || null) === variantId
-        ? { ...i, quantity: newQty }
-        : i
-    )
-  );
-
-  // Gửi API đúng chuẩn BE
-  try {
-    await axios.put(
-      `${API_BASE_URL}/cart/items/${productId}`,
-      {
-        variant_id: variantId,
-        quantity: newQty, // <<<<<<<<<<<<<<
-      },
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      }
+  const increaseQuantity = async (
+    productId: string,
+    variantId: string | null
+  ) => {
+    const item = cartItems.find(
+      (i) =>
+        i.product_id?._id === productId &&
+        (i.variant_id?._id || null) === variantId
     );
-  } catch (err) {
-    console.error("Lỗi tăng số lượng", err);
-  }
-};
 
+    if (!item) return;
+    const newQty = item.quantity + 1;
 
-const decreaseQuantity = async (productId: string, variantId: string | null) => {
-  const item = cartItems.find(
-    (i) =>
-      i.product_id?._id === productId &&
-      (i.variant_id?._id || null) === variantId
-  );
-
-  if (!item || item.quantity <= 1) return;
-  const newQty = item.quantity - 1;
-
-  setCartItems((prev) =>
-    prev.map((i) =>
-      i.product_id?._id === productId &&
-      (i.variant_id?._id || null) === variantId
-        ? { ...i, quantity: newQty }
-        : i
-    )
-  );
-
-  try {
-    await axios.put(
-      `${API_BASE_URL}/cart/items/${productId}`,
-      {
-        variant_id: variantId,
-        quantity: newQty, // <<<<<<<<<<<
-      },
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      }
+    setCartItems((prev) =>
+      prev.map((i) =>
+        i.product_id?._id === productId &&
+        (i.variant_id?._id || null) === variantId
+          ? { ...i, quantity: newQty }
+          : i
+      )
     );
-  } catch (err) {
-    console.error("Lỗi giảm số lượng", err);
-  }
-};
 
+    try {
+      await axios.put(
+        `${API_BASE_URL}/cart/items/${productId}`,
+        {
+          variant_id: variantId,
+          quantity: newQty,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+    } catch (err) {
+      console.error("Lỗi tăng số lượng", err);
+    }
+  };
 
+  const decreaseQuantity = async (
+    productId: string,
+    variantId: string | null
+  ) => {
+    const item = cartItems.find(
+      (i) =>
+        i.product_id?._id === productId &&
+        (i.variant_id?._id || null) === variantId
+    );
+
+    if (!item || item.quantity <= 1) return;
+    const newQty = item.quantity - 1;
+
+    setCartItems((prev) =>
+      prev.map((i) =>
+        i.product_id?._id === productId &&
+        (i.variant_id?._id || null) === variantId
+          ? { ...i, quantity: newQty }
+          : i
+      )
+    );
+
+    try {
+      await axios.put(
+        `${API_BASE_URL}/cart/items/${productId}`,
+        {
+          variant_id: variantId,
+          quantity: newQty,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+    } catch (err) {
+      console.error("Lỗi giảm số lượng", err);
+    }
+  };
 
   const removeItem = async (productId: string, variantId?: string | null) => {
- 
-  const previousCart = [...cartItems];
+    const previousCart = [...cartItems];
 
-  setCartItems((prev) =>
-    prev.filter(
-      (i) =>
-        !(i.product_id?._id === productId && (i.variant_id?._id || null) === (variantId || null))
-    )
-  );
-
-  try {
-    await axios.delete(
-      `${API_BASE_URL}/cart/items/${productId}`,
-      {
-        data: { variant_id: variantId || null }, 
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`
-        }
-      }
+    setCartItems((prev) =>
+      prev.filter(
+        (i) =>
+          !(
+            i.product_id?._id === productId &&
+            (i.variant_id?._id || null) === (variantId || null)
+          )
+      )
     );
-  } catch (err) {
-    console.error("Lỗi xoá sản phẩm", err);
 
-    setCartItems(previousCart);
-  }
-};
+    try {
+      await axios.delete(`${API_BASE_URL}/cart/items/${productId}`, {
+        data: { variant_id: variantId || null },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+    } catch (err) {
+      console.error("Lỗi xoá sản phẩm", err);
+      setCartItems(previousCart);
+    }
+  };
 
+  // ✅ FIX: Thêm kiểm tra an toàn cho product_id
   const subtotal = cartItems
-  .filter((item) =>
-    selectedItems.includes(item.product_id._id + (item.variant_id?._id || ""))
-  )
-  .reduce(
-    (sum, item) =>
-      sum + (item.variant_id?.price ?? item.product_id.price) * item.quantity,
-    0
-  );
-
+    .filter((item) => {
+      // Kiểm tra item.product_id có tồn tại trước khi truy cập _id
+      if (!item.product_id) return false;
+      const key = item.product_id._id + (item.variant_id?._id || "");
+      return selectedItems.includes(key);
+    })
+    .reduce(
+      (sum, item) =>
+        sum +
+        (item.variant_id?.price ?? item.product_id?.price ?? 0) * item.quantity,
+      0
+    );
 
   const handleCheckout = () => {
-  
-  // Lọc sản phẩm được chọn
-  const selected = cartItems.filter(item =>
-    selectedItems.includes(item.product_id._id + (item.variant_id?._id || ""))
-  );
+    // Lọc sản phẩm được chọn với kiểm tra an toàn
+    const selected = cartItems.filter((item) => {
+      if (!item.product_id) return false;
+      const key = item.product_id._id + (item.variant_id?._id || "");
+      return selectedItems.includes(key);
+    });
 
-  // Chuyển sang trang thanh toán
-  navigate("/thanhtoan", {
-    state: { selectedItems: selected }
-  });
-};
+    navigate("/thanhtoan", {
+      state: { selectedItems: selected },
+    });
+  };
 
   const handleCloseLoginModal = () => {
     setShowLoginModal(false);
@@ -186,22 +189,12 @@ const decreaseQuantity = async (productId: string, variantId: string | null) => 
       />
     );
   }
-//   const toggleSelect = (key: string) => {
-//   setSelectedItems((prev) =>
-//     prev.includes(key)
-//       ? prev.filter((id) => id !== key)
-//       : [...prev, key]
-//   );
-// };
 
-const toggleSelect = (key: string) => {
-  setSelectedItems((prev) =>
-    prev.includes(key)
-      ? prev.filter((id) => id !== key)
-      : [...prev, key]
-  );
-};
-
+  const toggleSelect = (key: string) => {
+    setSelectedItems((prev) =>
+      prev.includes(key) ? prev.filter((id) => id !== key) : [...prev, key]
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10">
@@ -212,12 +205,18 @@ const toggleSelect = (key: string) => {
         </div>
 
         {loading ? (
-          <p className="text-center py-10 text-gray-600">Đang tải giỏ hàng...</p>
+          <p className="text-center py-10 text-gray-600">
+            Đang tải giỏ hàng...
+          </p>
         ) : cartItems.length === 0 ? (
           <div className="text-center py-20">
             <ShoppingCart className="w-24 h-24 mx-auto text-gray-300 mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-600 mb-2">Giỏ hàng trống</h2>
-            <p className="text-gray-500 mb-6">Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm</p>
+            <h2 className="text-2xl font-semibold text-gray-600 mb-2">
+              Giỏ hàng trống
+            </h2>
+            <p className="text-gray-500 mb-6">
+              Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm
+            </p>
             <button
               onClick={() => navigate("/")}
               className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition"
@@ -242,111 +241,116 @@ const toggleSelect = (key: string) => {
                 </tr>
               </thead>
               <tbody>
-                  {cartItems.map((item) => {
-                    const product = item.product_id;
-                    const variant = item.variant_id;
+                {cartItems.map((item) => {
+                  const product = item.product_id;
+                  const variant = item.variant_id;
 
-                    const key = product._id + (variant?._id || ""); 
-                    // const key = `${item.product_id._id}-${item.variant_id?._id || "null"}`;
+                  // ✅ Kiểm tra product có tồn tại trước khi render
+                  if (!product) return null;
 
-                    const price = variant?.price ?? product.price;
-                    const maxQty = getMaxQuantity(item);
+                  const key = product._id + (variant?._id || "");
+                  const price = variant?.price ?? product.price;
+                  const maxQty = getMaxQuantity(item);
 
-                    return (
-                      <tr key={key} className="border-b hover:bg-gray-50">
-                        
-                        {/* CHECKBOX */}
-                        <td className="p-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.includes(key)}
-                            onChange={() => toggleSelect(key)}
-                            className="w-5 h-5 accent-purple-600"
-                          />
-                        </td>
+                  return (
+                    <tr key={key} className="border-b hover:bg-gray-50">
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(key)}
+                          onChange={() => toggleSelect(key)}
+                          className="w-5 h-5 accent-purple-600"
+                        />
+                      </td>
 
-                        {/* ẢNH */}
-                        <td className="p-3 flex justify-center">
-                          <img
-                            src={product.images?.[0] || "/placeholder.jpg"}
-                            className="w-16 h-16 rounded-xl object-cover"
-                            alt={product.name}
-                          />
-                        </td>
+                      <td className="p-3 flex justify-center">
+                        <img
+                          src={product.images?.[0] || "/placeholder.jpg"}
+                          className="w-16 h-16 rounded-xl object-cover"
+                          alt={product.name}
+                        />
+                      </td>
 
-                    
-                        <td className="p-3 text-left font-semibold">
-                          <span>{product.name}</span>
-                          
-                        </td>
-                        <td>
-                          {variant && (
-                            <p className="p-3 text-left">
-                            {variant.type}
-                            </p>
-                          )}
-                        </td>
+                      <td className="p-3 text-left font-semibold">
+                        <span>{product.name}</span>
+                      </td>
 
-                        <td><p className="p-3 text-left">
-                            {product.category?.name || "—"}
-                        </p></td>
-                        
+                      <td>
+                        {variant && (
+                          <p className="p-3 text-left">{variant.type}</p>
+                        )}
+                      </td>
 
-                        {/* GIÁ */}
-                        <td className="p-3 text-center text-purple-700 font-semibold">
-                          {price.toLocaleString()} đ
-                        </td>
+                      <td>
+                        <p className="p-3 text-left">
+                          {product.category?.name || "—"}
+                        </p>
+                      </td>
 
-                        {/* SỐ LƯỢNG */}
-                        <td className="p-3 text-center">
-                          <div className="flex justify-center items-center space-x-2">
-                            <button
-                              onClick={() => decreaseQuantity(product._id, variant?._id || null)}
-                              disabled={item.quantity <= 1}
-                              className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                item.quantity <= 1
-                                  ? "bg-gray-300 cursor-not-allowed"
-                                  : "bg-purple-600 text-white"
-                              }`}
-                            >
-                              −
-                            </button>
+                      <td className="p-3 text-center text-purple-700 font-semibold">
+                        {price?.toLocaleString() || "0"} đ
+                      </td>
 
-                            <span className="text-lg font-medium">{item.quantity}</span>
-
-                            <button
-                              onClick={() => increaseQuantity(product._id, variant?._id || null)}
-                              disabled={item.quantity >= maxQty}
-                              className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                item.quantity >= maxQty
-                                  ? "bg-gray-300 cursor-not-allowed"
-                                  : "bg-purple-600 text-white"
-                              }`}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* TỔNG */}
-                        <td className="p-3 text-center font-semibold">
-                          {(price * item.quantity).toLocaleString()} đ
-                        </td>
-
-                        {/* XOÁ */}
-                        <td className="p-3 text-center">
+                      <td className="p-3 text-center">
+                        <div className="flex justify-center items-center space-x-2">
                           <button
-                            onClick={() => removeItem(product._id, variant?._id || null)}
-                            className="text-red-500 hover:text-red-700"
+                            onClick={() =>
+                              decreaseQuantity(
+                                product._id,
+                                variant?._id || null
+                              )
+                            }
+                            disabled={item.quantity <= 1}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              item.quantity <= 1
+                                ? "bg-gray-300 cursor-not-allowed"
+                                : "bg-purple-600 text-white"
+                            }`}
                           >
-                            Xóa
+                            −
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
 
+                          <span className="text-lg font-medium">
+                            {item.quantity}
+                          </span>
+
+                          <button
+                            onClick={() =>
+                              increaseQuantity(
+                                product._id,
+                                variant?._id || null
+                              )
+                            }
+                            disabled={item.quantity >= maxQty}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              item.quantity >= maxQty
+                                ? "bg-gray-300 cursor-not-allowed"
+                                : "bg-purple-600 text-white"
+                            }`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+
+                      <td className="p-3 text-center font-semibold">
+                        {((price ?? 0) * item.quantity).toLocaleString()} đ
+                      </td>
+
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() =>
+                            removeItem(product._id, variant?._id || null)
+                          }
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          Xóa
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
 
             <div className="flex justify-end mt-10">
@@ -373,7 +377,6 @@ const toggleSelect = (key: string) => {
                 </button>
               </div>
             </div>
-
           </>
         )}
       </div>
