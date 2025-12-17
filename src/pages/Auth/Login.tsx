@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -10,7 +10,14 @@ const LoginPage: React.FC = () => {
   const [success, setSuccess] = useState(false);
 
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+
+  // Redirect nếu user đã đăng nhập
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async () => {
     setError("");
@@ -23,7 +30,8 @@ const LoginPage: React.FC = () => {
       setSuccess(true);
 
       setTimeout(() => {
-        navigate("/");
+        // Sử dụng replace: true để thay thế history entry
+        navigate("/", { replace: true });
       }, 800);
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || "Đăng nhập thất bại!";
@@ -139,7 +147,7 @@ const LoginPage: React.FC = () => {
 
             <div className="text-center pt-4">
               <p className="text-gray-600">
-                Chưa có tài khoản?
+                Chưa có tài khoản?{" "}
                 <a
                   href="/register"
                   className="text-purple-600 hover:text-purple-700 font-semibold underline"

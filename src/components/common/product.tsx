@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import LoginModal from "../../pages/Auth/LoginModal";
 import { API_BASE_URL } from "../../configs/api";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Book = {
   _id?: string;
@@ -18,18 +19,11 @@ type Book = {
 
 const BookCard = ({
   book,
-  onAddToCart,
 }: {
   book: Book;
   onAddToCart: (book: Book) => void;
 }) => {
   const navigate = useNavigate();
-
-  const formatPrice = (price: number | string) => {
-    const numPrice =
-      typeof price === "string" ? parseFloat(price.replace(/\./g, "")) : price;
-    return new Intl.NumberFormat("vi-VN").format(numPrice);
-  };
 
   const getBookName = () => book.title || book.name || "Sản phẩm";
   const getBookId = () => book._id || book.id;
@@ -53,14 +47,9 @@ const BookCard = ({
     }
   };
 
-  const handleAddToCartClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onAddToCart(book);
-  };
-
   return (
     <div
-      className="bg-white border rounded-lg shadow-sm hover:shadow-md p-4 flex flex-col transition-all duration-300 cursor-pointer"
+      className="bg-white border rounded-lg shadow-sm hover:shadow-md p-4 flex flex-col transition-all duration-300 cursor-pointer flex-shrink-0 w-64"
       onClick={handleCardClick}
     >
       <img
@@ -87,6 +76,97 @@ const BookCard = ({
   );
 };
 
+const CarouselSection = ({
+  title,
+  books,
+  onAddToCart,
+}: {
+  title: string;
+  books: Book[];
+  onAddToCart: (book: Book) => void;
+}) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScrollability = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } =
+        scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkScrollability();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener("scroll", checkScrollability);
+      return () => container.removeEventListener("scroll", checkScrollability);
+    }
+  }, [books]);
+
+  const scroll = (direction: "left" | "right") => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 280;
+      const newScrollLeft =
+        scrollContainerRef.current.scrollLeft +
+        (direction === "left" ? -scrollAmount : scrollAmount);
+
+      scrollContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  return (
+    <section className="relative">
+      <h2 className="text-2xl font-bold mb-6">{title}</h2>
+
+      <div className="relative group">
+        {/* Left Arrow */}
+        {canScrollLeft && (
+          <button
+            onClick={() => scroll("left")}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-3 transition-all duration-300 opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-800" />
+          </button>
+        )}
+
+        {/* Scrollable Container */}
+        <div
+          ref={scrollContainerRef}
+          className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {books.map((book, idx) => (
+            <BookCard
+              key={book._id || book.id || idx}
+              book={book}
+              onAddToCart={onAddToCart}
+            />
+          ))}
+        </div>
+
+        {/* Right Arrow */}
+        {canScrollRight && (
+          <button
+            onClick={() => scroll("right")}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-3 transition-all duration-300 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-6 h-6 text-gray-800" />
+          </button>
+        )}
+      </div>
+    </section>
+  );
+};
+
 const BookCarousel: React.FC = () => {
   const [selectedBooks, setSelectedBooks] = useState<Book[]>([]);
   const [mustBuyBooks, setMustBuyBooks] = useState<Book[]>([]);
@@ -102,7 +182,7 @@ const BookCarousel: React.FC = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE_URL}/products?limit=8`);
+        const res = await fetch(`${API_BASE_URL}/products?limit=12`);
         const data = await res.json();
 
         let products: Book[] = [];
@@ -112,8 +192,8 @@ const BookCarousel: React.FC = () => {
           products = data.data.items;
         else if (data.items && Array.isArray(data.items)) products = data.items;
 
-        setSelectedBooks(products.slice(0, 4));
-        setMustBuyBooks(products.slice(4, 8));
+        setSelectedBooks(products.slice(0, 6));
+        setMustBuyBooks(products.slice(6, 12));
       } catch (err) {
         console.error(err);
         setError("Không thể tải sản phẩm");
@@ -132,6 +212,7 @@ const BookCarousel: React.FC = () => {
     }
     addToCartHandler(book);
   };
+
   const addToCartHandler = async (book: Book) => {
     try {
       if (!isAuthenticated) {
@@ -265,31 +346,23 @@ const BookCarousel: React.FC = () => {
         </div>
       </section>
 
-      <section>
-        <h2 className="text-2xl font-bold mb-6">Lựa chọn cho bạn</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {selectedBooks.map((book, idx) => (
-            <BookCard
-              key={book._id || book.id || idx}
-              book={book}
-              onAddToCart={handleAddToCart}
-            />
-          ))}
-        </div>
-      </section>
+      <CarouselSection
+        title="Lựa chọn cho bạn"
+        books={selectedBooks}
+        onAddToCart={handleAddToCart}
+      />
 
-      <section>
-        <h2 className="text-2xl font-bold mb-6">Có thể mua ngay</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {mustBuyBooks.map((book, idx) => (
-            <BookCard
-              key={book._id || book.id || idx}
-              book={book}
-              onAddToCart={handleAddToCart}
-            />
-          ))}
-        </div>
-      </section>
+      <CarouselSection
+        title="Có thể mua ngay"
+        books={mustBuyBooks}
+        onAddToCart={handleAddToCart}
+      />
+
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 };

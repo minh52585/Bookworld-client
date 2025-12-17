@@ -32,7 +32,6 @@ function Thanhtoan() {
       return;
     }
 
-    // ❗ KHÔNG CÓ selectedItems → CẤM VÀO CHECKOUT
     if (!location.state || !location.state.selectedItems) {
       navigate("/cart", { replace: true });
       return;
