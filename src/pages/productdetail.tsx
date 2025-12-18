@@ -24,6 +24,21 @@ interface Category {
   name?: string;
 }
 
+interface Review {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  product: string;
+  rating: number;
+  comment: string;
+  images?: string[];
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  updatedAt: string;
+}
 const BookDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -47,13 +62,29 @@ const BookDetailPage: React.FC = () => {
     useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState("");
 
-  const { isAuthenticated } = useAuth();
+  // Review states
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [userReview, setUserReview] = useState<Review | null>(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewError, setReviewError] = useState("");
+  const [isEditingReview, setIsEditingReview] = useState(false);
+  const [averageRating, setAverageRating] = useState(0);
+  const [reviewImages, setReviewImages] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [canReview, setCanReview] = useState(false);
+  const [checkingPurchase, setCheckingPurchase] = useState(true);
+  
+  const { isAuthenticated, user } = useAuth();
 
   const getErrorMessage = (err: any) =>
     err?.response?.data?.message ||
     err?.response?.data?.error ||
     err?.response?.data?.msg ||
     "Có lỗi xảy ra, vui lòng thử lại";
+
   // Fetch main product
   useEffect(() => {
     const fetchProduct = async () => {
@@ -70,6 +101,42 @@ const BookDetailPage: React.FC = () => {
     };
     fetchProduct();
   }, [id]);
+
+  // Fetch reviews
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/reviews/products/${id}`);
+        const reviewsData = res.data.data || res.data || [];
+        setReviews(reviewsData);
+
+        // Calculate average rating
+        if (reviewsData.length > 0) {
+          const sum = reviewsData.reduce(
+            (acc: number, r: Review) => acc + r.rating,
+            0
+          );
+          setAverageRating(sum / reviewsData.length);
+        }
+
+        // Check if user has already reviewed
+        if (isAuthenticated && user) {
+          const existingReview = reviewsData.find(
+            (r: Review) => r.user._id === user._id || r.user._id === user.id
+          );
+          if (existingReview) {
+            setUserReview(existingReview);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching reviews:", err);
+        setReviews([]);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+    fetchReviews();
+  }, [id, isAuthenticated, user]);
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
@@ -174,7 +241,83 @@ const BookDetailPage: React.FC = () => {
     localStorage.setItem("lastViewed", JSON.stringify(newViewed));
   }, [product]);
 
-  // Quantity handlers
+  // Check if user has purchased this product
+  useEffect(() => {
+    const checkPurchaseStatus = async () => {
+      if (!isAuthenticated || !id) {
+        setCheckingPurchase(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}/orders/check-purchase/${id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        setCanReview(
+          response.data.data?.hasPurchased ||
+            response.data.hasPurchased ||
+            false
+        );
+      } catch (err) {
+        console.error("Error checking purchase:", err);
+        setCanReview(false);
+      } finally {
+        setCheckingPurchase(false);
+      }
+    };
+
+    checkPurchaseStatus();
+  }, [id, isAuthenticated]);
+
+  // Handle image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (reviewImages.length + files.length > 5) {
+      setReviewError("Tối đa 5 ảnh");
+      return;
+    }
+
+    setUploadingImages(true);
+    setReviewError("");
+
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const response = await axios.post(
+          `${API_BASE_URL}/upload/image`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        return response.data.url || response.data.data?.url;
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      setReviewImages([...reviewImages, ...uploadedUrls.filter(Boolean)]);
+    } catch (err: any) {
+      setReviewError(getErrorMessage(err));
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setReviewImages(reviewImages.filter((_, i) => i !== index));
+  };
   const handleDecrement = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
@@ -188,13 +331,11 @@ const BookDetailPage: React.FC = () => {
     });
   };
 
-  // Product click handler
   const handleProductClick = (productId: string) => {
     navigate(`/products/${productId}`);
     window.scrollTo(0, 0);
   };
 
-  // Handle Add to Cart
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
@@ -229,7 +370,6 @@ const BookDetailPage: React.FC = () => {
     }
   };
 
-  // Handle Toggle Favorite
   const handleToggleFavorite = async () => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
@@ -270,6 +410,163 @@ const BookDetailPage: React.FC = () => {
     }
   };
 
+  // Review handlers
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (!canReview) {
+      setReviewError("Bạn cần mua sản phẩm này trước khi đánh giá");
+      return;
+    }
+
+    if (!reviewComment.trim()) {
+      setReviewError("Vui lòng nhập nội dung đánh giá");
+      return;
+    }
+
+    try {
+      if (isEditingReview && userReview) {
+        // Update existing review
+        const res = await axios.put(
+          `${API_BASE_URL}/reviews/${userReview._id}`,
+          {
+            rating: reviewRating,
+            comment: reviewComment,
+            images: reviewImages, 
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        const updatedReview = res.data.data || res.data;
+        setUserReview(updatedReview);
+        setReviews(
+          reviews.map((r) => (r._id === updatedReview._id ? updatedReview : r))
+        );
+      } else {
+        // Create new review
+        const res = await axios.post(
+          `${API_BASE_URL}/reviews/products/${id}`,
+          {
+            rating: reviewRating,
+            comment: reviewComment,
+            images: reviewImages,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        const newReview = res.data.data || res.data;
+        setUserReview(newReview);
+        setReviews([newReview, ...reviews]);
+      }
+
+      // Reset form
+      setShowReviewForm(false);
+      setReviewComment("");
+      setReviewRating(5);
+      setReviewImages([]);
+      setReviewError("");
+      setIsEditingReview(false);
+
+      // Recalculate average
+      const allReviews = isEditingReview
+        ? reviews
+        : [{ rating: reviewRating }, ...reviews];
+      const sum = allReviews.reduce((acc: any, r: any) => acc + r.rating, 0);
+      setAverageRating(sum / allReviews.length);
+    } catch (err: any) {
+      setReviewError(getErrorMessage(err));
+    }
+  };
+  const handleEditReview = () => {
+    if (userReview) {
+      setReviewRating(userReview.rating);
+      setReviewComment(userReview.comment);
+      setReviewImages(userReview.images || []);
+      setIsEditingReview(true);
+      setShowReviewForm(true);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!userReview || !window.confirm("Bạn có chắc muốn xóa đánh giá này?"))
+      return;
+
+    try {
+      await axios.delete(`${API_BASE_URL}/reviews/${userReview._id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      setReviews(reviews.filter((r) => r._id !== userReview._id));
+      setUserReview(null);
+      setShowReviewForm(false);
+      setReviewComment("");
+      setReviewRating(5);
+
+      // Recalculate average
+      const remainingReviews = reviews.filter((r) => r._id !== userReview._id);
+      if (remainingReviews.length > 0) {
+        const sum = remainingReviews.reduce((acc, r) => acc + r.rating, 0);
+        setAverageRating(sum / remainingReviews.length);
+      } else {
+        setAverageRating(0);
+      }
+    } catch (err: any) {
+      alert(getErrorMessage(err));
+    }
+  };
+
+  const renderStars = (
+    rating: number,
+    interactive: boolean = false,
+    onRate?: (rating: number) => void
+  ) => {
+    return (
+      <div className="flex items-center space-x-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            disabled={!interactive}
+            onClick={() => interactive && onRate && onRate(star)}
+            className={`${
+              interactive ? "cursor-pointer hover:scale-110" : ""
+            } transition`}
+          >
+            <i
+              className={`${
+                star <= rating ? "fas text-yellow-400" : "far text-gray-300"
+              } fa-star text-xl`}
+            ></i>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("vi-VN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   const getProductName = (p: Product) => p.name || "Sản phẩm";
   const getProductImage = (p: Product) =>
     p.image || p.images?.[0] || "/placeholder.jpg";
@@ -287,7 +584,7 @@ const BookDetailPage: React.FC = () => {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
       />
-
+      
       {showCartNotification && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">
@@ -369,6 +666,20 @@ const BookDetailPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Danh mục: {category.name}
             </h1>
+
+            {/* Average Rating */}
+            {reviews.length > 0 && (
+              <div className="flex items-center space-x-3 mb-4">
+                {renderStars(Math.round(averageRating))}
+                <span className="text-lg font-semibold text-gray-700">
+                  {averageRating.toFixed(1)} / 5
+                </span>
+                <span className="text-gray-500">
+                  ({reviews.length} đánh giá)
+                </span>
+              </div>
+            )}
+
             <p className="text-lg text-gray-700 mb-4">
               Tác giả: {product.author}
             </p>
@@ -520,6 +831,236 @@ const BookDetailPage: React.FC = () => {
                 {isFavorite ? "Đã yêu thích" : "Yêu thích"}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <h2 className="text-2xl font-bold mb-6">Đánh giá sản phẩm</h2>
+
+          {/* Review Form */}
+
+          {isAuthenticated && !userReview && !showReviewForm && (
+            <>
+              {checkingPurchase ? (
+                <div className="mb-6 text-gray-600">
+                  <i className="fas fa-spinner fa-spin mr-2"></i>
+                  Đang kiểm tra...
+                </div>
+              ) : canReview ? (
+                <button
+                  onClick={() => setShowReviewForm(true)}
+                  className="mb-6 px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
+                >
+                  <i className="fas fa-star mr-2"></i>
+                  Viết đánh giá
+                </button>
+              ) : (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-700">
+                    <i className="fas fa-info-circle mr-2"></i>
+                    Bạn cần mua sản phẩm này trước khi có thể đánh giá
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ← THÊM ĐOẠN NÀY - Hiển thị nút Edit/Delete nếu user đã review */}
+          {isAuthenticated && userReview && !showReviewForm && (
+            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm text-purple-700 mb-2">
+                Bạn đã đánh giá sản phẩm này
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleEditReview}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition text-sm"
+                >
+                  <i className="fas fa-edit mr-2"></i>
+                  Chỉnh sửa
+                </button>
+                <button
+                  onClick={handleDeleteReview}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm"
+                >
+                  <i className="fas fa-trash mr-2"></i>
+                  Xóa
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showReviewForm && (
+            <form
+              onSubmit={handleSubmitReview}
+              className="mb-8 p-6 bg-gray-50 rounded-lg"
+            >
+              <h3 className="text-lg font-semibold mb-4">
+                {isEditingReview
+                  ? "Chỉnh sửa đánh giá"
+                  : "Viết đánh giá của bạn"}
+              </h3>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">
+                  Đánh giá của bạn
+                </label>
+                {renderStars(reviewRating, true, setReviewRating)}
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">
+                  Nhận xét
+                </label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..."
+                  required
+                ></textarea>
+              </div>
+
+              {/* ← THÊM PHẦN UPLOAD ẢNH */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">
+                  Thêm ảnh (Tối đa 5 ảnh)
+                </label>
+
+                {/* Preview images */}
+                {reviewImages.length > 0 && (
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {reviewImages.map((img, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={img}
+                          alt={`review-${index}`}
+                          className="w-24 h-24 object-cover rounded-lg border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                {reviewImages.length < 5 && (
+                  <label className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md cursor-pointer hover:bg-gray-300 transition">
+                    <i className="fas fa-camera mr-2"></i>
+                    {uploadingImages ? "Đang tải..." : "Thêm ảnh"}
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={uploadingImages || reviewImages.length >= 5}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {reviewError && (
+                <p className="text-red-600 text-sm mb-4">{reviewError}</p>
+              )}
+
+              <div className="flex space-x-3">
+                <button
+                  type="submit"
+                  disabled={uploadingImages}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition disabled:opacity-50"
+                >
+                  {isEditingReview ? "Cập nhật" : "Gửi đánh giá"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReviewForm(false);
+                    setReviewComment("");
+                    setReviewRating(5);
+                    setReviewImages([]);
+                    setReviewError("");
+                    setIsEditingReview(false);
+                  }}
+                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition"
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
+          )}
+          {/* Reviews List */}
+          <div className="space-y-6">
+            {loadingReviews ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent"></div>
+                <p className="mt-2 text-gray-600">Đang tải đánh giá...</p>
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="text-center py-8">
+                <i className="fas fa-star text-6xl text-gray-300 mb-4"></i>
+                <p className="text-gray-600">Chưa có đánh giá nào</p>
+                {!isAuthenticated && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Đăng nhập để trở thành người đầu tiên đánh giá sản phẩm này
+                  </p>
+                )}
+              </div>
+            ) : (
+              reviews
+                .filter((review) => review.status === "approved")
+                .map((review) => (
+                  <div
+                    key={review._id}
+                    className="border-b border-gray-200 pb-6 last:border-b-0"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-semibold">
+                          {review.user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {review.user.name}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {formatDate(review.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                      {renderStars(review.rating)}
+                    </div>
+                    <p className="text-gray-700 leading-relaxed ml-13 mb-3">
+                      {review.comment}
+                    </p>
+
+                    {/* ← THÊM PHẦN HIỂN THỊ ẢNH */}
+                    {review.images && review.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2 ml-13">
+                        {review.images.map((img, idx) => (
+                          <img
+                            key={idx}
+                            src={img}
+                            alt={`review-img-${idx}`}
+                            className="w-24 h-24 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition"
+                            onClick={() => window.open(img, "_blank")}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+            )}
           </div>
         </div>
       </div>
