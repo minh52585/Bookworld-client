@@ -280,7 +280,7 @@ function Thanhtoan() {
       console.log(" Response từ VNPay:", response.data);
 
       if (response.data.success && response.data.data.paymentUrl) {
-        /
+        
         // Lưu orderId vào localStorage để tracking
         localStorage.setItem("pending_order_id", response.data.orderId);
 

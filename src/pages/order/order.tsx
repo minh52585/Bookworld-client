@@ -117,6 +117,11 @@ function OrderList() {
       icon: <Truck className="w-4 h-4" />,
       className: "bg-yellow-100 text-yellow-800 border border-yellow-300",
     },
+    "Giao hàng không thành công": {
+      label: "Giao hàng không thành công",
+      icon: <AlertCircle className="w-4 h-4" />,
+      className: "bg-orange-100 text-orange-700 border border-orange-300",
+    },
     "Giao hàng thành công": {
       label: "Giao hàng thành công",
       icon: <CheckCheck className="w-4 h-4" />,
