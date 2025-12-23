@@ -37,24 +37,21 @@ function OrderList() {
     fetchOrders();
   }, [isAuthenticated]);
 
-  // ✅ THÊM: Check query params sau khi VNPay redirect về
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const success = params.get("success");
     const error = params.get("error");
 
     if (success === "true") {
-      // ✅ Refetch orders để cập nhật UI
       fetchOrders();
 
-      // ✅ Hiển thị thông báo thành công
       alert("Thanh toán VNPay thành công!");
 
-      // ✅ Xóa query params khỏi URL
-      window.history.replaceState({}, "", "/order");
+      navigate("/order", { replace: true });
     } else if (error) {
       alert(`Thanh toán thất bại: ${error}`);
-      window.history.replaceState({}, "", "/order");
+
+      navigate("/order", { replace: true });
     }
   }, []);
 

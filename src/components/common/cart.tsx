@@ -147,7 +147,6 @@ function Cart() {
     }
   };
 
-  // ✅ FIX: Thêm kiểm tra an toàn cho product_id
   const subtotal = cartItems
     .filter((item) => {
       // Kiểm tra item.product_id có tồn tại trước khi truy cập _id
@@ -163,12 +162,22 @@ function Cart() {
     );
 
   const handleCheckout = () => {
-    // Lọc sản phẩm được chọn với kiểm tra an toàn
+    if (selectedItems.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán");
+      return;
+    }
+
     const selected = cartItems.filter((item) => {
       if (!item.product_id) return false;
       const key = item.product_id._id + (item.variant_id?._id || "");
       return selectedItems.includes(key);
     });
+
+    if (selected.length === 0) {
+      alert("Dữ liệu giỏ hàng không hợp lệ, vui lòng tải lại");
+      fetchCart();
+      return;
+    }
 
     navigate("/thanhtoan", {
       state: { selectedItems: selected },

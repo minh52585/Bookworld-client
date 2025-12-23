@@ -277,18 +277,16 @@ function Thanhtoan() {
         }
       );
 
-      console.log("✅ Response từ VNPay:", response.data);
+      console.log(" Response từ VNPay:", response.data);
 
       if (response.data.success && response.data.data.paymentUrl) {
-        // ✅ QUAN TRỌNG: KHÔNG XÓA GIỎ HÀNG Ở ĐÂY!
-        // Việc xóa giỏ hàng sẽ được xử lý ở backend sau khi thanh toán thành công
-
-        // ✅ Lưu orderId vào localStorage để tracking
+        /
+        // Lưu orderId vào localStorage để tracking
         localStorage.setItem("pending_order_id", response.data.orderId);
 
         alert("Đang chuyển đến trang thanh toán VNPay...");
 
-        // ✅ Chuyển hướng đến VNPay
+        // Chuyển hướng đến VNPay
         window.location.href = response.data.data.paymentUrl;
       } else {
         alert(
