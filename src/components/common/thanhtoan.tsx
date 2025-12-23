@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, CreditCard, Wallet } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
@@ -69,7 +69,6 @@ function Thanhtoan() {
     setFormData({ ...formData, [name]: value });
   };
 
-  // Tính tổng tiền
   const total = cartItems.reduce((sum, item) => {
     if (!item.product_id) return sum;
     const price = item.variant_id?.price ?? item.product_id?.price ?? 0;
@@ -78,8 +77,7 @@ function Thanhtoan() {
 
   const phiShip = 30000;
 
-  const handleSubmitOrder = async () => {
-    // Validate form
+  const handleSubmitOrderCOD = async () => {
     if (
       !formData.fullName ||
       !formData.email ||
@@ -95,7 +93,6 @@ function Thanhtoan() {
       return;
     }
 
-    // Kiểm tra số lượng tồn kho trước khi đặt hàng
     const invalidItems = cartItems.filter((item) => {
       if (!item.product_id) return false;
       const availableQty =
@@ -131,7 +128,6 @@ function Thanhtoan() {
     setLoading(true);
 
     try {
-      // Chuẩn bị dữ liệu đơn hàng
       const orderData = {
         shipping_address: {
           name: formData.fullName,
@@ -143,7 +139,7 @@ function Thanhtoan() {
           status: "Chưa thanh toán",
         },
         items: cartItems
-          .filter((item) => item.product_id) // Lọc item hợp lệ
+          .filter((item) => item.product_id)
           .map((item: any) => ({
             product_id: item.product_id._id,
             variant_id: item.variant_id?._id || null,
@@ -162,10 +158,6 @@ function Thanhtoan() {
         note: "",
       };
 
-      console.log("📦 Đang gửi đơn hàng:", orderData);
-      console.log("🌐 API URL:", `${API_BASE_URL}/orders`);
-      console.log("🔑 Token:", token ? "Có" : "Không có");
-
       const response = await axios.post(`${API_BASE_URL}/orders`, orderData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -173,11 +165,8 @@ function Thanhtoan() {
         },
       });
 
-      console.log("✅ Response từ server:", response.data);
-
       if (response.data.success) {
         alert("Đặt hàng thành công!");
-
         setCartItems([]);
 
         try {
@@ -203,12 +192,7 @@ function Thanhtoan() {
         );
       }
     } catch (error: any) {
-      console.error("❌ Chi tiết lỗi:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url,
-      });
+      console.error("❌ Chi tiết lỗi:", error);
 
       let errorMsg = "Đặt hàng thất bại. Vui lòng thử lại!";
 
@@ -222,13 +206,6 @@ function Thanhtoan() {
         errorMsg = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
         localStorage.removeItem("token");
         navigate("/login");
-      } else if (
-        error.response?.status === 400 &&
-        error.response?.data?.message?.includes("không đủ số lượng")
-      ) {
-        errorMsg =
-          error.response.data.message +
-          "\n\nVui lòng quay lại giỏ hàng và giảm số lượng!";
       } else if (error.response?.data?.message) {
         errorMsg = error.response.data.message;
       }
@@ -236,6 +213,119 @@ function Thanhtoan() {
       alert(errorMsg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ============================================
+  // FILE 1: Thanhtoan.tsx (FRONTEND)
+  // ============================================
+
+  const handleSubmitOrderVNPay = async () => {
+    if (
+      !formData.fullName ||
+      !formData.email ||
+      !formData.phone ||
+      !formData.addressDetail
+    ) {
+      alert("Vui lòng điền đầy đủ thông tin!");
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      alert("Giỏ hàng trống!");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      navigate("/login");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const orderData = {
+        items: cartItems
+          .filter((item) => item.product_id && item.variant_id)
+          .map((item: any) => ({
+            product_id: item.product_id._id,
+            variant_id: item.variant_id._id,
+            quantity: item.quantity,
+          })),
+        shipping_address: {
+          name: formData.fullName,
+          phone: formData.phone,
+          address: formData.addressDetail,
+        },
+        shipping_fee: phiShip,
+        note: "",
+        discountCode: "",
+      };
+
+      console.log("📦 Đang gửi đơn hàng VNPay:", orderData);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/vnpay/create`,
+        orderData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("✅ Response từ VNPay:", response.data);
+
+      if (response.data.success && response.data.data.paymentUrl) {
+        // ✅ QUAN TRỌNG: KHÔNG XÓA GIỎ HÀNG Ở ĐÂY!
+        // Việc xóa giỏ hàng sẽ được xử lý ở backend sau khi thanh toán thành công
+
+        // ✅ Lưu orderId vào localStorage để tracking
+        localStorage.setItem("pending_order_id", response.data.orderId);
+
+        alert("Đang chuyển đến trang thanh toán VNPay...");
+
+        // ✅ Chuyển hướng đến VNPay
+        window.location.href = response.data.data.paymentUrl;
+      } else {
+        alert(
+          "Tạo link thanh toán thất bại: " +
+            (response.data.message || "Lỗi không xác định")
+        );
+      }
+    } catch (error: any) {
+      console.error("❌ Chi tiết lỗi VNPay:", error);
+
+      let errorMsg = "Tạo thanh toán VNPay thất bại. Vui lòng thử lại!";
+
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message.includes("Network Error")
+      ) {
+        errorMsg =
+          "Không thể kết nối đến server. Vui lòng kiểm tra backend đã chạy chưa.";
+      } else if (error.response?.status === 401) {
+        errorMsg = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+
+      alert(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitOrder = () => {
+    if (paymentMethod === "vnpay") {
+      handleSubmitOrderVNPay();
+    } else {
+      handleSubmitOrderCOD();
     }
   };
 
@@ -258,7 +348,6 @@ function Thanhtoan() {
     <div className="bg-gradient-to-br from-purple-50 to-pink-50 py-8 px-4 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* FORM THÔNG TIN */}
           <div className="bg-white shadow-lg rounded-xl p-8 lg:col-span-2">
             <h2 className="text-2xl font-bold text-purple-600 flex items-center gap-2 mb-6">
               <ShoppingCart /> Thông Tin Giao Hàng
@@ -325,9 +414,15 @@ function Thanhtoan() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-5 h-5 text-purple-600 focus:ring-purple-500"
                   />
-                  <span className="text-gray-700 font-medium">
-                    Thanh toán khi nhận hàng (COD)
-                  </span>
+                  <Wallet className="w-6 h-6 text-purple-600" />
+                  <div>
+                    <p className="text-gray-700 font-medium">
+                      Thanh toán khi nhận hàng (COD)
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Thanh toán bằng tiền mặt khi nhận hàng
+                    </p>
+                  </div>
                 </label>
 
                 <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-500 transition">
@@ -339,9 +434,39 @@ function Thanhtoan() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-5 h-5 text-purple-600 focus:ring-purple-500"
                   />
-                  <span className="text-gray-700 font-medium">
-                    Chuyển khoản ngân hàng
-                  </span>
+                  <CreditCard className="w-6 h-6 text-purple-600" />
+                  <div>
+                    <p className="text-gray-700 font-medium">
+                      Chuyển khoản ngân hàng
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Chuyển khoản trực tiếp qua ngân hàng
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-4 border-2 border-blue-200 rounded-lg cursor-pointer hover:border-blue-500 transition bg-blue-50">
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="vnpay"
+                    checked={paymentMethod === "vnpay"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-5 h-5 text-blue-600 focus:ring-blue-500"
+                  />
+                  <img
+                    src="https://vnpay.vn/s1/statics.vnpay.vn/2023/9/06ncktiwd6dc1694418196384.png"
+                    alt="VNPay"
+                    className="h-8"
+                  />
+                  <div>
+                    <p className="text-gray-700 font-medium">
+                      Thanh toán VNPay
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Thanh toán trực tuyến qua cổng VNPay
+                    </p>
+                  </div>
                 </label>
               </div>
             </div>
@@ -352,14 +477,19 @@ function Thanhtoan() {
               className={`w-full p-4 rounded-lg font-bold transition mt-6 ${
                 loading
                   ? "bg-gray-400 cursor-not-allowed"
+                  : paymentMethod === "vnpay"
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "bg-purple-600 text-white hover:bg-purple-700"
               }`}
             >
-              {loading ? "Đang xử lý..." : "Xác Nhận Đặt Hàng"}
+              {loading
+                ? "Đang xử lý..."
+                : paymentMethod === "vnpay"
+                ? "Thanh toán VNPay"
+                : "Xác Nhận Đặt Hàng"}
             </button>
           </div>
 
-          {/* THÔNG TIN ĐƠN HÀNG */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <h2 className="text-2xl font-bold text-purple-600 mb-6">
               Thông tin đặt hàng
