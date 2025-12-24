@@ -104,12 +104,8 @@ const UserProfile: React.FC = () => {
               Thông tin cá nhân
             </button>
             <button
-              onClick={() => setActiveTab("orders")}
-              className={`flex-1 px-6 py-4 font-semibold transition ${
-                activeTab === "orders"
-                  ? "bg-purple-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-purple-50"
-              }`}
+              onClick={() => navigate("/order")}
+              className="flex-1 px-6 py-4 font-semibold transition bg-white text-gray-600 hover:bg-purple-50"
             >
               <i className="fas fa-shopping-bag mr-2"></i>
               Đơn hàng của tôi
@@ -203,35 +199,6 @@ const UserProfile: React.FC = () => {
                     <i className="fas fa-edit mr-2"></i>
                     Chỉnh sửa thông tin
                   </button>
-                </div>
-              </div>
-            )}
-
-            {/* Đơn hàng */}
-            {activeTab === "orders" && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  Đơn hàng của tôi
-                </h2>
-
-                {/* Empty State */}
-                <div className="text-center py-16">
-                  <div className="text-6xl text-gray-300 mb-4">
-                    <i className="fas fa-shopping-bag"></i>
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                    Bạn chưa có đơn hàng nào
-                  </h3>
-                  <p className="text-gray-500 mb-6">
-                    Hãy khám phá và mua sắm những cuốn sách yêu thích!
-                  </p>
-                  <Link
-                    to="/"
-                    className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition shadow-md"
-                  >
-                    <i className="fas fa-book mr-2"></i>
-                    Khám phá sách
-                  </Link>
                 </div>
               </div>
             )}
