@@ -76,7 +76,7 @@ const BookDetailPage: React.FC = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [canReview, setCanReview] = useState(false);
   const [checkingPurchase, setCheckingPurchase] = useState(true);
-  
+
   const { isAuthenticated, user } = useAuth();
 
   const getErrorMessage = (err: any) =>
@@ -341,6 +341,7 @@ const BookDetailPage: React.FC = () => {
       setShowLoginModal(true);
       return;
     }
+
     if (!product || !selectedVariant) return;
 
     if (selectedVariant.quantity === 0) {
@@ -357,9 +358,13 @@ const BookDetailPage: React.FC = () => {
           quantity: quantity,
         },
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
       );
+
+      window.dispatchEvent(new Event("cartUpdated"));
 
       setShowCartNotification(true);
       setTimeout(() => setShowCartNotification(false), 2000);
@@ -437,7 +442,7 @@ const BookDetailPage: React.FC = () => {
           {
             rating: reviewRating,
             comment: reviewComment,
-            images: reviewImages, 
+            images: reviewImages,
           },
           {
             headers: {
@@ -584,7 +589,7 @@ const BookDetailPage: React.FC = () => {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
       />
-      
+
       {showCartNotification && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">

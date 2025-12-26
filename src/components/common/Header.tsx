@@ -13,6 +13,7 @@ const Header = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
 
   const { user, isAuthenticated, logout } = useAuth();
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -20,6 +21,53 @@ const Header = () => {
 
   let searchTimeout: any;
 
+  // Lấy số lượng sản phẩm trong giỏ hàng
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      if (!isAuthenticated) {
+        setCartItemCount(0);
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setCartItemCount(0);
+          return;
+        }
+
+        const res = await axios.get(`${API_BASE_URL}/cart`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const cartItems = res.data?.data?.items || [];
+
+        const totalCount = cartItems.reduce((sum: number, item: any) => {
+          const qty = parseInt(item.quantity) || 1;
+          return sum + qty;
+        }, 0);
+
+        setCartItemCount(totalCount);
+      } catch (err) {
+        console.error("Lỗi khi lấy giỏ hàng:", err);
+        setCartItemCount(0);
+      }
+    };
+
+    fetchCartCount();
+
+    const handleCartUpdate = () => {
+      fetchCartCount();
+    };
+
+    window.addEventListener("cartUpdated", handleCartUpdate);
+
+    return () => {
+      window.removeEventListener("cartUpdated", handleCartUpdate);
+    };
+  }, [isAuthenticated]);
   // danh muc
   useEffect(() => {
     const fetchCategories = async () => {
@@ -319,11 +367,17 @@ const Header = () => {
               Trả hàng
             </a>
 
+            {/* Giỏ hàng với badge */}
             <Link
               to="/cart"
-              className="text-purple-600 text-xl hover:text-purple-700"
+              className="text-purple-600 text-xl hover:text-purple-700 relative"
             >
               <i className="fas fa-shopping-cart"></i>
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                  {cartItemCount > 99 ? "99+" : cartItemCount}
+                </span>
+              )}
             </Link>
 
             <a
@@ -334,29 +388,62 @@ const Header = () => {
             </a>
             <div className="relative" ref={userMenuRef}>
               {isAuthenticated ? (
-                <div className="flex items-center space-x-3">
-                  <span className="text-gray-700">
-                    Xin chào,{" "}
-                    <b className="text-purple-700">
-                      {user?.name || user?.email}
-                    </b>
-                  </span>
-
-                  {user?.role === "admin" && (
-                    <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded font-semibold">
-                      ADMIN
-                    </span>
-                  )}
-
+                <>
+                  {/* ICON USER */}
                   <button
-                    onClick={() => setShowLogoutModal(true)}
-                    className="text-red-600 hover:text-red-700 text-sm font-medium"
+                    onClick={() => setOpenUserMenu((prev) => !prev)}
+                    className="flex items-center gap-2 text-purple-600 hover:text-purple-700"
                   >
-                    Đăng xuất
+                    <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center">
+                      <i className="fas fa-user text-lg"></i>
+                    </div>
                   </button>
-                </div>
+
+                  {/* DROPDOWN */}
+                  {openUserMenu && (
+                    <div className="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-lg border z-50 overflow-hidden">
+                      {/* Header */}
+                      <div className="px-4 py-3 border-b bg-gray-50">
+                        <p className="font-semibold text-gray-800">
+                          {user?.name || "Người dùng"}
+                        </p>
+                        <p className="text-sm text-gray-500 truncate">
+                          {user?.email}
+                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="py-1">
+                        <Link
+                          to="/user-profile"
+                          className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-purple-50 text-gray-700"
+                        >
+                          <i className="fas fa-user-circle text-purple-600"></i>
+                          Thông tin tài khoản
+                        </Link>
+
+                        <Link
+                          to="/orders"
+                          className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-purple-50 text-gray-700"
+                        >
+                          <i className="fas fa-box text-purple-600"></i>
+                          Đơn hàng của tôi
+                        </Link>
+
+                        <button
+                          onClick={() => setShowLogoutModal(true)}
+                          className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm hover:bg-red-50 text-red-600"
+                        >
+                          <i className="fas fa-sign-out-alt"></i>
+                          Đăng xuất
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <>
+                  {/* CHƯA ĐĂNG NHẬP */}
                   <div
                     onClick={() => setOpenUserMenu((prev) => !prev)}
                     className="text-purple-600 text-xl cursor-pointer hover:text-purple-700"
@@ -368,14 +455,13 @@ const Header = () => {
                     <div className="absolute right-0 mt-2 w-48 bg-white border shadow-md rounded z-50">
                       <Link
                         to="/login"
-                        className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
+                        className="block px-4 py-2 hover:bg-purple-100"
                       >
                         Đăng nhập
                       </Link>
-
                       <Link
                         to="/register"
-                        className="block px-4 py-2 hover:bg-purple-100 hover:text-purple-700"
+                        className="block px-4 py-2 hover:bg-purple-100"
                       >
                         Đăng ký
                       </Link>

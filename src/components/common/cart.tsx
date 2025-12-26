@@ -146,7 +146,7 @@ function Cart() {
       setCartItems(previousCart);
     }
   };
-
+  window.dispatchEvent(new Event("cartUpdated"));
   const subtotal = cartItems
     .filter((item) => {
       // Kiểm tra item.product_id có tồn tại trước khi truy cập _id
