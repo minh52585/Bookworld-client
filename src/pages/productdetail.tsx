@@ -582,6 +582,40 @@ const BookDetailPage: React.FC = () => {
     return (
       <div className="p-10 text-center text-red-500 text-xl">{pageError}</div>
     );
+  const selectDefaultVariantAndRun = async (
+    productId: string,
+    action: "cart" | "favorite"
+  ) => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/products/${productId}`);
+      const productData = res.data.data.product;
+      const variants = res.data.data.variant || [];
+
+      if (!variants.length) {
+        alert("Sản phẩm chưa có biến thể");
+        return;
+      }
+
+      const availableVariant = variants.find((v: any) => v.quantity > 0);
+
+      if (!availableVariant) {
+        alert("Sản phẩm đã hết hàng");
+        return;
+      }
+
+      // gán lại state đang dùng
+      setProduct(productData);
+      setSelectedVariant(availableVariant);
+
+      // đợi React cập nhật state
+      setTimeout(() => {
+        if (action === "cart") handleAddToCart();
+        if (action === "favorite") handleToggleFavorite();
+      }, 0);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <div className="bg-gray-50">
@@ -769,16 +803,45 @@ const BookDetailPage: React.FC = () => {
                     onClick={handleDecrement}
                     disabled={quantity <= 1}
                     className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
-                      ${
-                        quantity <= 1
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:border-purple-600"
-                      }`}
+      ${
+        quantity <= 1
+          ? "opacity-50 cursor-not-allowed"
+          : "hover:border-purple-600"
+      }`}
                   >
                     <i className="fas fa-minus text-gray-600"></i>
                   </button>
 
-                  <span className="text-xl font-semibold">{quantity}</span>
+                  {/* INPUT NHẬP TAY */}
+                  <input
+                    type="number"
+                    min={1}
+                    max={selectedVariant?.quantity ?? 1}
+                    value={quantity}
+                    disabled={!selectedVariant}
+                    onChange={(e) => {
+                      let val = Number(e.target.value);
+
+                      if (isNaN(val)) return;
+                      if (val < 1) val = 1;
+
+                      if (
+                        selectedVariant?.quantity &&
+                        val > selectedVariant.quantity
+                      ) {
+                        val = selectedVariant.quantity;
+                      }
+
+                      setQuantity(val);
+                    }}
+                    className={`w-20 text-center border rounded-md py-1 text-lg
+      ${
+        !selectedVariant
+          ? "bg-gray-100 cursor-not-allowed"
+          : "border-gray-300 focus:border-purple-600 focus:outline-none"
+      }
+    `}
+                  />
 
                   <button
                     onClick={handleIncrement}
@@ -787,12 +850,11 @@ const BookDetailPage: React.FC = () => {
                       quantity >= (selectedVariant.quantity || 0)
                     }
                     className={`w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center
-                      ${
-                        !selectedVariant ||
-                        quantity >= (selectedVariant.quantity || 0)
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:border-purple-600"
-                      }`}
+      ${
+        !selectedVariant || quantity >= (selectedVariant.quantity || 0)
+          ? "opacity-50 cursor-not-allowed"
+          : "hover:border-purple-600"
+      }`}
                   >
                     <i className="fas fa-plus text-gray-600"></i>
                   </button>
@@ -1162,11 +1224,7 @@ const BookDetailPage: React.FC = () => {
                     className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!isAuthenticated) {
-                        setShowLoginModal(true);
-                      } else {
-                        handleAddToCart();
-                      }
+                      selectDefaultVariantAndRun(item._id, "cart");
                     }}
                   >
                     <i className="fas fa-shopping-cart mr-2"></i>Thêm vào giỏ

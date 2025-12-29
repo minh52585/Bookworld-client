@@ -136,7 +136,7 @@ const UserProfile: React.FC = () => {
               {/* User Info */}
               <div>
                 <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                  {user.name || "Người dùng"}
+                  {user.fullname || "Người dùng"}
                 </h1>
                 <p className="text-gray-600 mb-1">
                   <i className="fas fa-envelope mr-2 text-purple-600"></i>
@@ -505,7 +505,7 @@ const UserProfile: React.FC = () => {
                       Họ và tên
                     </label>
                     <p className="text-lg font-medium text-gray-800">
-                      {user.name || "Chưa cập nhật"}
+                      {user.fullname || "Chưa cập nhật"}
                     </p>
                   </div>
 
@@ -527,7 +527,7 @@ const UserProfile: React.FC = () => {
                       Số điện thoại
                     </label>
                     <p className="text-lg font-medium text-gray-800">
-                      {user.phone || "Chưa cập nhật"}
+                      {user.fullphone || "Chưa cập nhật"}
                     </p>
                   </div>
 

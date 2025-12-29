@@ -405,8 +405,9 @@ const Header = () => {
                       {/* Header */}
                       <div className="px-4 py-3 border-b bg-gray-50">
                         <p className="font-semibold text-gray-800">
-                          {user?.name || "Người dùng"}
+                          Xin chào, {user?.fullname || "Người dùng"}
                         </p>
+
                         <p className="text-sm text-gray-500 truncate">
                           {user?.email}
                         </p>
@@ -423,7 +424,7 @@ const Header = () => {
                         </Link>
 
                         <Link
-                          to="/orders"
+                          to="/order"
                           className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-purple-50 text-gray-700"
                         >
                           <i className="fas fa-box text-purple-600"></i>
