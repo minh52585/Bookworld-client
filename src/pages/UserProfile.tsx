@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import axios from "axios";
+import { API_BASE_URL } from "../configs/api";
 
 const UserProfile: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -11,12 +13,186 @@ const UserProfile: React.FC = () => {
   const [showAddCardModal, setShowAddCardModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [loadingWallet, setLoadingWallet] = useState(false);
+  const [loadingDeposit, setLoadingDeposit] = useState(false);
+  const [loadingWithdraw] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [page] = useState(1);
+  const limit = 20;
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
+    } else {
+      fetchWalletBalance();
+      fetchTransactions();
     }
   }, [isAuthenticated, navigate]);
+
+  const fetchWalletBalance = async () => {
+    setLoadingWallet(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_BASE_URL}/wallet`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data && response.data.data) {
+        setWalletBalance(response.data.data.balance || 0);
+      }
+    } catch (error: any) {
+      console.error("Lỗi lấy số dư ví:", error);
+      if (error.response?.status === 401) {
+        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+        logout();
+        navigate("/login");
+      }
+    } finally {
+      setLoadingWallet(false);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    setLoadingTransactions(true);
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await axios.get(
+        `${API_BASE_URL}/walletTransaction/my-transactions`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            page,
+            limit,
+          },
+        }
+      );
+
+      if (response.data?.data) {
+        setTransactions(response.data.data);
+      }
+    } catch (error) {
+      console.error("Lỗi lấy lịch sử giao dịch:", error);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
+  const handleDeposit = async () => {
+    const amount = parseInt(depositAmount);
+
+    if (!amount || amount <= 0) {
+      alert("Vui lòng nhập số tiền hợp lệ!");
+      return;
+    }
+
+    if (amount < 10000) {
+      alert("Số tiền nạp tối thiểu là 10,000đ!");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      navigate("/login");
+      return;
+    }
+
+    setLoadingDeposit(true);
+
+    try {
+      console.log("📦 Đang tạo lệnh nạp tiền:", { amount });
+
+      const response = await axios.post(
+        `${API_BASE_URL}/walletTransaction/create`,
+        { amount },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("✅ Response nạp tiền:", response.data);
+
+      if (response.data.success && response.data.data.paymentUrl) {
+        alert("Đang chuyển đến trang thanh toán VNPay...");
+
+        // Lưu transaction ID để tracking
+        localStorage.setItem(
+          "pending_deposit_id",
+          response.data.data.balance._id
+        );
+
+        // Chuyển hướng đến VNPay
+        window.location.href = response.data.data.paymentUrl;
+      } else {
+        alert(
+          "Tạo lệnh nạp tiền thất bại: " +
+            (response.data.message || "Lỗi không xác định")
+        );
+      }
+    } catch (error: any) {
+      console.error("❌ Lỗi nạp tiền:", error);
+
+      let errorMsg = "Tạo lệnh nạp tiền thất bại. Vui lòng thử lại!";
+
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message.includes("Network Error")
+      ) {
+        errorMsg = "Không thể kết nối đến server. Vui lòng kiểm tra kết nối.";
+      } else if (error.response?.status === 401) {
+        errorMsg = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
+        logout();
+        navigate("/login");
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+
+      alert(errorMsg);
+    } finally {
+      setLoadingDeposit(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!withdrawAmount || withdrawAmount <= 0) {
+      alert("Vui lòng nhập số tiền hợp lệ");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Phiên đăng nhập đã hết hạn");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/walletTransaction/withdrawal`,
+        {
+          amount: Number(withdrawAmount),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      alert("Đã gửi yêu cầu rút tiền, chờ admin duyệt");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Không thể gửi yêu cầu rút tiền");
+    }
+  };
 
   if (!user) {
     return (
@@ -46,8 +222,47 @@ const UserProfile: React.FC = () => {
 
   const quickAmounts = [100000, 200000, 500000, 1000000, 2000000, 5000000];
 
-  // Mock data cho demo (thay bằng API thực tế)
-  const mockBalance = 5420000;
+  const getTransactionTypeLabel = (type: string) => {
+    const labels: any = {
+      "Nạp tiền": { label: "Nạp tiền", icon: "fa-arrow-down", color: "green" },
+      "Rút tiền": { label: "Rút tiền", icon: "fa-arrow-up", color: "blue" },
+      "Thanh toán": {
+        label: "Thanh toán đơn hàng",
+        icon: "fa-shopping-bag",
+        color: "purple",
+      },
+    };
+    return labels[type] || { label: type, icon: "fa-exchange", color: "gray" };
+  };
+  const formatDateTime = (value?: string) => {
+    if (!value) return "";
+    return new Date(value).toLocaleString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: any = {
+      "Thành công": {
+        label: "Hoàn thành",
+        class: "bg-green-100 text-green-700",
+      },
+      "Chờ xử lý": {
+        label: "Đang xử lý",
+        class: "bg-yellow-100 text-yellow-700",
+      },
+      "Thất bại": { label: "Thất bại", class: "bg-red-100 text-red-700" },
+    };
+    return (
+      labels[status] || { label: status, class: "bg-gray-100 text-gray-700" }
+    );
+  };
+
+  // Mock data cho demo thẻ ngân hàng
   const mockBankCards = [
     {
       id: 1,
@@ -66,53 +281,19 @@ const UserProfile: React.FC = () => {
       isDefault: false,
     },
   ];
-  const mockTransactions = [
-    {
-      id: 1,
-      type: "deposit",
-      amount: 1000000,
-      date: "2024-12-25",
-      status: "completed",
-      method: "Vietcombank",
-      note: "Nạp tiền vào ví",
-    },
-    {
-      id: 2,
-      type: "withdraw",
-      amount: 500000,
-      date: "2024-12-24",
-      status: "completed",
-      method: "TPBank",
-      note: "Rút tiền về tài khoản",
-    },
-    {
-      id: 3,
-      type: "purchase",
-      amount: 350000,
-      date: "2024-12-23",
-      status: "completed",
-      method: "wallet",
-      note: "Mua sách React Advanced",
-    },
-    {
-      id: 4,
-      type: "deposit",
-      amount: 2000000,
-      date: "2024-12-22",
-      status: "completed",
-      method: "Vietcombank",
-      note: "Nạp tiền",
-    },
-    {
-      id: 5,
-      type: "purchase",
-      amount: 280000,
-      date: "2024-12-21",
-      status: "completed",
-      method: "wallet",
-      note: "Mua sách JavaScript Pro",
-    },
-  ];
+
+  // Tính toán thống kê từ transactions thực tế
+  const totalDeposit = transactions
+    .filter((t) => t.type === "Nạp tiền" && t.status === "Thành công")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalWithdraw = transactions
+    .filter((t) => t.type === "Rút tiền" && t.status === "Thành công")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalPurchase = transactions
+    .filter((t) => t.type === "Thanh toán" && t.status === "Thành công")
+    .reduce((sum, t) => sum + t.amount, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-8">
@@ -163,13 +344,28 @@ const UserProfile: React.FC = () => {
               </div>
             </div>
 
-            {/* Balance Card - MỚI */}
+            {/* Balance Card */}
             <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl p-6 text-white min-w-[280px] shadow-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm opacity-90">💰 Số dư khả dụng</span>
+                <button
+                  onClick={fetchWalletBalance}
+                  className="text-white/80 hover:text-white"
+                  disabled={loadingWallet}
+                >
+                  <i
+                    className={`fas fa-sync-alt ${
+                      loadingWallet ? "fa-spin" : ""
+                    }`}
+                  ></i>
+                </button>
               </div>
               <div className="text-3xl font-bold mb-4">
-                {formatCurrency(mockBalance)}
+                {loadingWallet ? (
+                  <span className="text-xl">Đang tải...</span>
+                ) : (
+                  formatCurrency(walletBalance)
+                )}
               </div>
               <div className="flex gap-2">
                 <button
@@ -255,22 +451,11 @@ const UserProfile: React.FC = () => {
               <i className="fas fa-shopping-bag mr-2"></i>
               Đơn hàng
             </button>
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`flex-1 px-6 py-4 font-semibold transition ${
-                activeTab === "settings"
-                  ? "bg-purple-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-purple-50"
-              }`}
-            >
-              <i className="fas fa-cog mr-2"></i>
-              Cài đặt
-            </button>
           </div>
 
           {/* Tab Content */}
           <div className="p-8">
-            {/* TAB: Ví của tôi - MỚI */}
+            {/* TAB: Ví của tôi */}
             {activeTab === "wallet" && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">
@@ -284,11 +469,7 @@ const UserProfile: React.FC = () => {
                       Tổng nạp
                     </div>
                     <div className="text-2xl font-bold text-green-800">
-                      {formatCurrency(
-                        mockTransactions
-                          .filter((t) => t.type === "deposit")
-                          .reduce((s, t) => s + t.amount, 0)
-                      )}
+                      {formatCurrency(totalDeposit)}
                     </div>
                   </div>
 
@@ -298,11 +479,7 @@ const UserProfile: React.FC = () => {
                       Tổng rút
                     </div>
                     <div className="text-2xl font-bold text-blue-800">
-                      {formatCurrency(
-                        mockTransactions
-                          .filter((t) => t.type === "withdraw")
-                          .reduce((s, t) => s + t.amount, 0)
-                      )}
+                      {formatCurrency(totalWithdraw)}
                     </div>
                   </div>
 
@@ -312,11 +489,7 @@ const UserProfile: React.FC = () => {
                       Tổng chi tiêu
                     </div>
                     <div className="text-2xl font-bold text-purple-800">
-                      {formatCurrency(
-                        mockTransactions
-                          .filter((t) => t.type === "purchase")
-                          .reduce((s, t) => s + t.amount, 0)
-                      )}
+                      {formatCurrency(totalPurchase)}
                     </div>
                   </div>
                 </div>
@@ -347,7 +520,7 @@ const UserProfile: React.FC = () => {
               </div>
             )}
 
-            {/* TAB: Thẻ ngân hàng - MỚI */}
+            {/* TAB: Thẻ ngân hàng */}
             {activeTab === "cards" && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -414,83 +587,76 @@ const UserProfile: React.FC = () => {
               </div>
             )}
 
-            {/* TAB: Lịch sử giao dịch - MỚI */}
+            {/* TAB: Lịch sử giao dịch */}
             {activeTab === "history" && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  Lịch sử giao dịch
-                </h2>
-
-                <div className="space-y-3">
-                  {mockTransactions.map((t) => (
-                    <div
-                      key={t.id}
-                      className="bg-gray-50 hover:bg-gray-100 p-5 rounded-xl transition border border-gray-200"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                              t.type === "deposit"
-                                ? "bg-green-100 text-green-600"
-                                : t.type === "withdraw"
-                                ? "bg-blue-100 text-blue-600"
-                                : "bg-purple-100 text-purple-600"
-                            }`}
-                          >
-                            <i
-                              className={`fas ${
-                                t.type === "deposit"
-                                  ? "fa-arrow-down"
-                                  : t.type === "withdraw"
-                                  ? "fa-arrow-up"
-                                  : "fa-shopping-bag"
-                              } text-xl`}
-                            ></i>
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-800">
-                              {t.note}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {t.method} •{" "}
-                              {new Date(t.date).toLocaleDateString("vi-VN")}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div
-                            className={`text-lg font-bold ${
-                              t.type === "deposit"
-                                ? "text-green-600"
-                                : t.type === "withdraw"
-                                ? "text-blue-600"
-                                : "text-purple-600"
-                            }`}
-                          >
-                            {t.type === "deposit" ? "+" : "-"}
-                            {formatCurrency(t.amount)}
-                          </div>
-                          <div
-                            className={`text-xs px-2 py-1 rounded-full inline-block ${
-                              t.status === "completed"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }`}
-                          >
-                            {t.status === "completed"
-                              ? "Hoàn thành"
-                              : "Đang xử lý"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Lịch sử giao dịch
+                  </h2>
+                  <button
+                    onClick={fetchTransactions}
+                    disabled={loadingTransactions}
+                    className="bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                  >
+                    <i
+                      className={`fas fa-sync-alt mr-2 ${
+                        loadingTransactions ? "fa-spin" : ""
+                      }`}
+                    ></i>
+                    Làm mới
+                  </button>
                 </div>
+
+                {loadingTransactions ? (
+                  <div className="text-center py-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-gray-600">Đang tải giao dịch...</p>
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="text-center py-10">
+                    <i className="fas fa-receipt text-6xl text-gray-300 mb-4"></i>
+                    <p className="text-gray-600">Chưa có giao dịch nào</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {transactions.map((t) => {
+                      const typeInfo = getTransactionTypeLabel(t.type);
+                      const statusInfo = getStatusLabel(t.status);
+
+                      return (
+                        <div
+                          key={t._id}
+                          className="bg-gray-50 hover:bg-gray-100 p-5 rounded-xl transition border border-gray-200"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div
+                                className={`text-lg font-bold text-${typeInfo.color}-600`}
+                              >
+                                {t.type === "Nạp tiền" ? "+" : "-"}
+                                {formatCurrency(t.amount)}
+                              </div>
+                              <div
+                                className={`text-xs px-2 py-1 rounded-full inline-block ${statusInfo.class}`}
+                              >
+                                {statusInfo.label}
+                              </div>
+                            </div>
+                            {/* THỜI GIAN */}
+                            <div className="text-sm text-gray-500">
+                              {formatDateTime(t.createdAt)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Thông tin cá nhân - GIỮ NGUYÊN */}
+            {/* Thông tin cá nhân */}
             {activeTab === "info" && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">
@@ -498,7 +664,6 @@ const UserProfile: React.FC = () => {
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Họ tên */}
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <label className="text-sm font-semibold text-gray-600 mb-2 block">
                       <i className="fas fa-user mr-2 text-purple-600"></i>
@@ -509,7 +674,6 @@ const UserProfile: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Email */}
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <label className="text-sm font-semibold text-gray-600 mb-2 block">
                       <i className="fas fa-envelope mr-2 text-purple-600"></i>
@@ -520,7 +684,6 @@ const UserProfile: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Số điện thoại */}
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <label className="text-sm font-semibold text-gray-600 mb-2 block">
                       <i className="fas fa-phone mr-2 text-purple-600"></i>
@@ -531,7 +694,6 @@ const UserProfile: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Vai trò */}
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <label className="text-sm font-semibold text-gray-600 mb-2 block">
                       <i className="fas fa-shield-alt mr-2 text-purple-600"></i>
@@ -543,7 +705,6 @@ const UserProfile: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Địa chỉ */}
                 {user.address && (
                   <div className="bg-gray-50 p-4 rounded-lg mt-4">
                     <label className="text-sm font-semibold text-gray-600 mb-2 block">
@@ -558,7 +719,6 @@ const UserProfile: React.FC = () => {
                   </div>
                 )}
 
-                {/* Button chỉnh sửa */}
                 <div className="flex justify-end mt-6">
                   <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">
                     <i className="fas fa-edit mr-2"></i>
@@ -567,87 +727,10 @@ const UserProfile: React.FC = () => {
                 </div>
               </div>
             )}
-
-            {/* Cài đặt - GIỮ NGUYÊN */}
-            {activeTab === "settings" && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  Cài đặt tài khoản
-                </h2>
-
-                {/* Đổi mật khẩu */}
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    <i className="fas fa-lock mr-2 text-purple-600"></i>
-                    Đổi mật khẩu
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Để bảo mật tài khoản, bạn nên thay đổi mật khẩu định kỳ
-                  </p>
-                  <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-md">
-                    Đổi mật khẩu
-                  </button>
-                </div>
-
-                {/* Thông báo */}
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    <i className="fas fa-bell mr-2 text-purple-600"></i>
-                    Thông báo
-                  </h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                        defaultChecked
-                      />
-                      <span className="text-gray-700">
-                        Nhận email về đơn hàng
-                      </span>
-                    </label>
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                        defaultChecked
-                      />
-                      <span className="text-gray-700">
-                        Nhận email khuyến mãi
-                      </span>
-                    </label>
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                      />
-                      <span className="text-gray-700">
-                        Nhận thông báo sản phẩm mới
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Xóa tài khoản */}
-                <div className="bg-red-50 p-6 rounded-lg border border-red-200">
-                  <h3 className="text-lg font-semibold text-red-800 mb-4">
-                    <i className="fas fa-exclamation-triangle mr-2"></i>
-                    Vùng nguy hiểm
-                  </h3>
-                  <p className="text-red-700 mb-4">
-                    Xóa tài khoản sẽ xóa vĩnh viễn tất cả dữ liệu của bạn. Hành
-                    động này không thể hoàn tác.
-                  </p>
-                  <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-md">
-                    Xóa tài khoản
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Quick Actions - GIỮ NGUYÊN */}
+        {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
           <Link
             to="/cart"
@@ -709,36 +792,37 @@ const UserProfile: React.FC = () => {
                 Nạp tiền vào ví
               </h3>
               <button
-                onClick={() => setShowDepositModal(false)}
+                onClick={() => {
+                  setShowDepositModal(false);
+                  setDepositAmount("");
+                }}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
               >
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Chọn thẻ ngân hàng
-              </label>
-              <select className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                {mockBankCards.map((c) => (
-                  <option key={c.id}>
-                    {c.bankName} - {maskCardNumber(c.cardNumber)}
-                  </option>
-                ))}
-              </select>
+            <div className="bg-blue-50 p-4 rounded-lg mb-6 border-2 border-blue-200">
+              <div className="flex items-center gap-2 text-blue-700 mb-2">
+                <i className="fas fa-info-circle"></i>
+                <span className="font-semibold">Thanh toán qua VNPay</span>
+              </div>
+              <p className="text-sm text-blue-600">
+                Bạn sẽ được chuyển đến cổng thanh toán VNPay để hoàn tất giao
+                dịch
+              </p>
             </div>
 
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Số tiền nạp
+                Số tiền nạp (tối thiểu 10,000đ)
               </label>
               <input
                 type="number"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 placeholder="Nhập số tiền"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
               />
             </div>
 
@@ -755,19 +839,25 @@ const UserProfile: React.FC = () => {
             </div>
 
             <button
-              onClick={() => {
-                alert(
-                  `Nạp ${formatCurrency(
-                    parseInt(depositAmount || "0")
-                  )} thành công!`
-                );
-                setShowDepositModal(false);
-                setDepositAmount("");
-              }}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-3 rounded-lg font-semibold shadow-md"
+              onClick={handleDeposit}
+              disabled={loadingDeposit}
+              className={`w-full py-3 rounded-lg font-semibold shadow-md transition ${
+                loadingDeposit
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+              }`}
             >
-              <i className="fas fa-check-circle mr-2"></i>
-              Xác nhận nạp tiền
+              {loadingDeposit ? (
+                <>
+                  <i className="fas fa-spinner fa-spin mr-2"></i>
+                  Đang xử lý...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-check-circle mr-2"></i>
+                  Tiếp tục thanh toán VNPay
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -783,7 +873,10 @@ const UserProfile: React.FC = () => {
                 Rút tiền về tài khoản
               </h3>
               <button
-                onClick={() => setShowWithdrawModal(false)}
+                onClick={() => {
+                  setShowWithdrawModal(false);
+                  setWithdrawAmount("");
+                }}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
               >
                 <i className="fas fa-times"></i>
@@ -793,7 +886,7 @@ const UserProfile: React.FC = () => {
             <div className="bg-purple-100 p-4 rounded-lg mb-6 border-2 border-purple-300">
               <div className="text-sm text-purple-700 mb-1">Số dư khả dụng</div>
               <div className="text-2xl font-bold text-purple-800">
-                {formatCurrency(mockBalance)}
+                {formatCurrency(walletBalance)}
               </div>
             </div>
 
@@ -801,7 +894,7 @@ const UserProfile: React.FC = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Rút về thẻ
               </label>
-              <select className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+              <select className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
                 {mockBankCards.map((c) => (
                   <option key={c.id}>
                     {c.bankName} - {maskCardNumber(c.cardNumber)}
@@ -812,14 +905,14 @@ const UserProfile: React.FC = () => {
 
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Số tiền rút
+                Số tiền rút (tối thiểu 50,000đ)
               </label>
               <input
                 type="number"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
                 placeholder="Nhập số tiền"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
               />
             </div>
 
@@ -843,19 +936,25 @@ const UserProfile: React.FC = () => {
             </div>
 
             <button
-              onClick={() => {
-                alert(
-                  `Rút ${formatCurrency(
-                    parseInt(withdrawAmount || "0")
-                  )} thành công!`
-                );
-                setShowWithdrawModal(false);
-                setWithdrawAmount("");
-              }}
-              className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white py-3 rounded-lg font-semibold shadow-md"
+              onClick={handleWithdraw}
+              disabled={loadingWithdraw}
+              className={`w-full py-3 rounded-lg font-semibold shadow-md transition ${
+                loadingWithdraw
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white"
+              }`}
             >
-              <i className="fas fa-check-circle mr-2"></i>
-              Xác nhận rút tiền
+              {loadingWithdraw ? (
+                <>
+                  <i className="fas fa-spinner fa-spin mr-2"></i>
+                  Đang xử lý...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-check-circle mr-2"></i>
+                  Xác nhận rút tiền
+                </>
+              )}
             </button>
           </div>
         </div>

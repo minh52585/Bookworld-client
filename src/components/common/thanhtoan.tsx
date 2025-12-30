@@ -11,6 +11,8 @@ function Thanhtoan() {
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [loadingWallet, setLoadingWallet] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,6 +46,7 @@ function Thanhtoan() {
 
     setCartItems(selectedItems);
     fetchUserInfo();
+    fetchWalletBalance();
   }, [isAuthenticated]);
 
   const fetchUserInfo = async () => {
@@ -62,6 +65,28 @@ function Thanhtoan() {
     }
   };
 
+  const fetchWalletBalance = async () => {
+    setLoadingWallet(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_BASE_URL}/wallet`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data && response.data.data) {
+        setWalletBalance(response.data.data.balance || 0);
+      }
+    } catch (error: any) {
+      console.error("Lỗi lấy số dư ví:", error);
+      if (error.response?.status === 401) {
+        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+        navigate("/login");
+      }
+    } finally {
+      setLoadingWallet(false);
+    }
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -76,6 +101,7 @@ function Thanhtoan() {
   }, 0);
 
   const phiShip = 30000;
+  const totalAmount = total + phiShip;
 
   const handleSubmitOrderCOD = async () => {
     if (
@@ -154,7 +180,7 @@ function Thanhtoan() {
           code: "",
           amount: 0,
         },
-        total: total + phiShip,
+        total: totalAmount,
         note: "",
       };
 
@@ -195,6 +221,128 @@ function Thanhtoan() {
       console.error("❌ Chi tiết lỗi:", error);
 
       let errorMsg = "Đặt hàng thất bại. Vui lòng thử lại!";
+
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message.includes("Network Error")
+      ) {
+        errorMsg =
+          "Không thể kết nối đến server. Vui lòng kiểm tra backend đã chạy chưa.";
+      } else if (error.response?.status === 401) {
+        errorMsg = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+
+      alert(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitOrderWallet = async () => {
+    if (
+      !formData.fullName ||
+      !formData.email ||
+      !formData.phone ||
+      !formData.addressDetail
+    ) {
+      alert("Vui lòng điền đầy đủ thông tin!");
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      alert("Giỏ hàng trống!");
+      return;
+    }
+
+    // Kiểm tra số dư ví
+    if (walletBalance < totalAmount) {
+      alert(
+        `Số dư ví không đủ!\nSố dư hiện tại: ${walletBalance.toLocaleString()}đ\nTổng thanh toán: ${totalAmount.toLocaleString()}đ\n\nVui lòng nạp thêm tiền vào ví!`
+      );
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      navigate("/login");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const orderData = {
+        items: cartItems
+          .filter((item) => item.product_id && item.variant_id)
+          .map((item: any) => ({
+            product_id: item.product_id._id,
+            variant_id: item.variant_id._id,
+            quantity: item.quantity,
+          })),
+        shipping_address: {
+          name: formData.fullName,
+          phone: formData.phone,
+          address: formData.addressDetail,
+        },
+        shipping_fee: phiShip,
+        note: "",
+        discountCode: "",
+      };
+
+      console.log("📦 Đang gửi đơn hàng thanh toán ví:", orderData);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/wallet/create`,
+        orderData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("✅ Response từ Wallet:", response.data);
+
+      if (response.data.success) {
+        alert("Đặt hàng và thanh toán bằng ví thành công!");
+
+        // Cập nhật lại số dư ví
+        await fetchWalletBalance();
+
+        setCartItems([]);
+
+        try {
+          await axios.post(
+            `${API_BASE_URL}/cart/items/clear-selected`,
+            {
+              items: cartItems.map((item: any) => ({
+                product_id: item.product_id._id,
+                variant_id: item.variant_id?._id || null,
+              })),
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (err) {
+          console.warn("Không thể clear cart:", err);
+        }
+
+        navigate("/order", { replace: true });
+      } else {
+        alert(
+          "Đặt hàng thất bại: " +
+            (response.data.message || "Lỗi không xác định")
+        );
+      }
+    } catch (error: any) {
+      console.error("❌ Chi tiết lỗi Wallet:", error);
+
+      let errorMsg = "Thanh toán ví thất bại. Vui lòng thử lại!";
 
       if (
         error.code === "ERR_NETWORK" ||
@@ -273,15 +421,11 @@ function Thanhtoan() {
         }
       );
 
-      console.log(" Response từ VNPay:", response.data);
+      console.log("✅ Response từ VNPay:", response.data);
 
       if (response.data.success && response.data.data.paymentUrl) {
-        // Lưu orderId vào localStorage để tracking
         localStorage.setItem("pending_order_id", response.data.orderId);
-
         alert("Đang chuyển đến trang thanh toán VNPay...");
-
-        // Chuyển hướng đến VNPay
         window.location.href = response.data.data.paymentUrl;
       } else {
         alert(
@@ -317,6 +461,8 @@ function Thanhtoan() {
   const handleSubmitOrder = () => {
     if (paymentMethod === "vnpay") {
       handleSubmitOrderVNPay();
+    } else if (paymentMethod === "wallet") {
+      handleSubmitOrderWallet();
     } else {
       handleSubmitOrderCOD();
     }
@@ -407,7 +553,7 @@ function Thanhtoan() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-5 h-5 text-purple-600 focus:ring-purple-500"
                   />
-                  <Wallet className="w-6 h-6 text-purple-600" />
+                  <CreditCard className="w-6 h-6 text-purple-600" />
                   <div>
                     <p className="text-gray-700 font-medium">
                       Thanh toán khi nhận hàng (COD)
@@ -418,23 +564,54 @@ function Thanhtoan() {
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-500 transition">
+                <label
+                  className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition ${
+                    paymentMethod === "wallet"
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-200 hover:border-green-500"
+                  }`}
+                >
                   <input
                     type="radio"
                     name="payment"
-                    value="bank"
-                    checked={paymentMethod === "bank"}
+                    value="wallet"
+                    checked={paymentMethod === "wallet"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-purple-600 focus:ring-purple-500"
+                    className="w-5 h-5 text-green-600 focus:ring-green-500"
                   />
-                  <CreditCard className="w-6 h-6 text-purple-600" />
-                  <div>
+                  <Wallet className="w-6 h-6 text-green-600" />
+                  <div className="flex-1">
                     <p className="text-gray-700 font-medium">
-                      Chuyển khoản ngân hàng
+                      Thanh toán bằng ví điện tử
                     </p>
                     <p className="text-sm text-gray-500">
-                      Chuyển khoản trực tiếp qua ngân hàng
+                      Sử dụng số dư trong ví của bạn
                     </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      {loadingWallet ? (
+                        <span className="text-sm text-gray-500">
+                          Đang tải...
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-sm text-gray-600">Số dư:</span>
+                          <span
+                            className={`text-sm font-bold ${
+                              walletBalance >= totalAmount
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {walletBalance.toLocaleString()}đ
+                          </span>
+                          {walletBalance < totalAmount && (
+                            <span className="text-xs text-red-500 ml-2">
+                              (Không đủ số dư)
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </label>
 
@@ -466,12 +643,18 @@ function Thanhtoan() {
 
             <button
               onClick={handleSubmitOrder}
-              disabled={loading}
+              disabled={
+                loading ||
+                (paymentMethod === "wallet" && walletBalance < totalAmount)
+              }
               className={`w-full p-4 rounded-lg font-bold transition mt-6 ${
-                loading
+                loading ||
+                (paymentMethod === "wallet" && walletBalance < totalAmount)
                   ? "bg-gray-400 cursor-not-allowed"
                   : paymentMethod === "vnpay"
                   ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : paymentMethod === "wallet"
+                  ? "bg-green-600 text-white hover:bg-green-700"
                   : "bg-purple-600 text-white hover:bg-purple-700"
               }`}
             >
@@ -479,6 +662,10 @@ function Thanhtoan() {
                 ? "Đang xử lý..."
                 : paymentMethod === "vnpay"
                 ? "Thanh toán VNPay"
+                : paymentMethod === "wallet"
+                ? walletBalance < totalAmount
+                  ? "Số dư không đủ"
+                  : "Thanh toán bằng ví"
                 : "Xác Nhận Đặt Hàng"}
             </button>
           </div>
@@ -567,7 +754,7 @@ function Thanhtoan() {
 
                   <div className="flex justify-between font-bold text-xl text-purple-600 pt-3 border-t">
                     <span>Tổng thanh toán:</span>
-                    <span>{(total + phiShip).toLocaleString()}đ</span>
+                    <span>{totalAmount.toLocaleString()}đ</span>
                   </div>
                 </div>
               </>

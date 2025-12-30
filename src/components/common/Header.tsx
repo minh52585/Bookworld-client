@@ -156,7 +156,7 @@ const Header = () => {
     setTimeout(() => {
       setShowLogoutSuccess(false);
       nav("/");
-    }, 1500);
+    }, 1000);
   };
 
   useEffect(() => {
