@@ -357,15 +357,6 @@ const Header = () => {
             <a href="#" className="hover:text-purple-600">
               Chính sách bảo mật
             </a>
-            <a href="#" className="hover:text-purple-600">
-              Bảo hành
-            </a>
-            <a href="#" className="hover:text-purple-600">
-              Vận chuyển
-            </a>
-            <a href="#" className="hover:text-purple-600">
-              Trả hàng
-            </a>
 
             {/* Giỏ hàng với badge */}
             <Link
@@ -499,16 +490,7 @@ const Header = () => {
             </div>
 
             <a href="#" className="hover:text-purple-600">
-              Tin tức
-            </a>
-            <a href="#" className="hover:text-purple-600">
               Khuyến mãi tháng
-            </a>
-            <a href="#" className="hover:text-purple-600">
-              Nhà xuất bản
-            </a>
-            <a href="#" className="hover:text-purple-600">
-              Đăng ký nhận tin
             </a>
           </div>
 

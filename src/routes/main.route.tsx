@@ -12,6 +12,7 @@ import OrderDetailPage from "../pages/order/orderDetail";
 import SearchPage from "../pages/SearchPage";
 import FavoritesPage from "../pages/FavoritePage";
 import UserProfile from "../pages/UserProfile";
+import AllProducts from "../components/common/AllProductPage";
 
 export const router = createBrowserRouter([
   {
@@ -65,6 +66,10 @@ export const router = createBrowserRouter([
       {
         path: "user-profile",
         element: <UserProfile />,
+      },
+      {
+        path: "allproducts",
+        element: <AllProducts />,
       },
     ],
   },

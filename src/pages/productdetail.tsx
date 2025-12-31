@@ -4,6 +4,8 @@ import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "./Auth/LoginModal";
 import { API_BASE_URL } from "../configs/api";
+import { showNotification } from "../utils/notification";
+import { error } from "console";
 
 interface Product {
   _id: string;
@@ -90,8 +92,26 @@ const BookDetailPage: React.FC = () => {
     const fetchProduct = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/products/${id}`);
-        setProduct(res.data.data.product || null);
-        setVariants(res.data.data.variant || []);
+        const productData = res.data.data.product;
+        const variantList = res.data.data.variant || [];
+
+        setProduct(productData);
+        setVariants(variantList);
+
+        // chọn mặc định bìa mềm
+        if (variantList.length > 0) {
+          const softCover =
+            variantList.find(
+              (v: any) =>
+                v.type?.toLowerCase().includes("Bìa mềm") && v.quantity > 0
+            ) ||
+            variantList.find((v: any) => v.quantity > 0) ||
+            variantList[0];
+
+          setSelectedVariant(softCover);
+          setQuantity(1);
+        }
+
         setCategory(res.data.data.category || []);
       } catch (err) {
         setPageError("Không tìm thấy sản phẩm!");
@@ -592,14 +612,14 @@ const BookDetailPage: React.FC = () => {
       const variants = res.data.data.variant || [];
 
       if (!variants.length) {
-        alert("Sản phẩm chưa có biến thể");
+        showNotification("Sản phẩm này chưa có biến thể", "error");
         return;
       }
 
       const availableVariant = variants.find((v: any) => v.quantity > 0);
 
       if (!availableVariant) {
-        alert("Sản phẩm đã hết hàng");
+        showNotification("Sản phẩm này đã hết hàng", "error");
         return;
       }
 
