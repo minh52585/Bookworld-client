@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../configs/api";
+
 import {
   Search,
   Filter,
@@ -58,7 +60,6 @@ interface ApiResponse {
   };
 }
 
-const API_BASE_URL = "http://localhost:5002/api";
 
 // ============= MAIN COMPONENT =============
 const AllProducts: React.FC = () => {

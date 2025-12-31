@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { API_BASE_URL } from "../../configs/api";
 
 const ForgotPasswordFlow: React.FC = () => {
   const [step, setStep] = useState(1); 
@@ -12,7 +13,8 @@ const ForgotPasswordFlow: React.FC = () => {
   const [success, setSuccess] = useState("");
 
   // Cấu hình API base URL
-  const API_BASE_URL = "http://localhost:5002/api/auth";
+
+
 
   //Gửi OTP về email
   const handleSendOTP = async () => {
@@ -21,7 +23,7 @@ const ForgotPasswordFlow: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+      const response = await fetch(`${API_BASE_URL}/api/forgot-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
