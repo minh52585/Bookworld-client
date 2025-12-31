@@ -4,6 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
 import { API_BASE_URL } from "../../configs/api";
+import { showNotification } from "../../utils/notification";
 import {
   Clock,
   AlertCircle,
@@ -44,13 +45,10 @@ function OrderList() {
 
     if (success === "true") {
       fetchOrders();
-
-      alert("Thanh toán VNPay thành công!");
-
+      showNotification("Thanh toán VNpay thành công!", "success");
       navigate("/order", { replace: true });
     } else if (error) {
-      alert(`Thanh toán thất bại: ${error}`);
-
+      showNotification("Thanh toán thất bại!", "error");
       navigate("/order", { replace: true });
     }
   }, []);
@@ -69,6 +67,28 @@ function OrderList() {
     setLoading(false);
   };
 
+  const handleRefundToWallet = async (orderId: string) => {
+    if (!window.confirm("Xác nhận hoàn tiền về ví?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_BASE_URL}/orders/${orderId}/refund`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data.success) {
+        showNotification(response.data.message, "success");
+        fetchOrders(); // Reload danh sách
+      }
+    } catch (error: any) {
+      const errMsg = error.response?.data?.message || "Không thể hoàn tiền";
+      showNotification(errMsg, "error");
+    }
+  };
   const handleCloseLoginModal = () => {
     setShowLoginModal(false);
     navigate("/");
@@ -134,7 +154,7 @@ function OrderList() {
     },
   };
 
-  // ✅ THÊM: Function để hiển thị trạng thái thanh toán
+  //  Function để hiển thị trạng thái thanh toán
   const getPaymentStatusDisplay = (paymentStatus: string) => {
     if (paymentStatus === "Đã thanh toán") {
       return (
@@ -160,7 +180,7 @@ function OrderList() {
     }
   };
 
-  // ✅ THÊM: Function để hiển thị phương thức thanh toán
+  //Function để hiển thị phương thức thanh toán
   const getPaymentMethodDisplay = (method: string) => {
     switch (method) {
       case "cod":
@@ -388,7 +408,6 @@ function OrderList() {
                   </div>
                 </div>
 
-                {/* ✅ SỬA: Thông tin thanh toán */}
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
                   <h3 className="text-lg font-semibold mb-3">
                     Thông tin thanh toán
@@ -407,7 +426,6 @@ function OrderList() {
                       {getPaymentStatusDisplay(selectedOrder.payment.status)}
                     </div>
 
-                    {/* ✅ THÊM: Hiển thị mã giao dịch nếu có */}
                     {selectedOrder.payment.transaction_id && (
                       <div className="md:col-span-2">
                         <p className="text-sm text-gray-600 mb-2">
@@ -419,7 +437,6 @@ function OrderList() {
                       </div>
                     )}
 
-                    {/* ✅ THÊM: Hiển thị thời gian thanh toán */}
                     {selectedOrder.payment.paid_at && (
                       <div className="md:col-span-2">
                         <p className="text-sm text-gray-600 mb-2">
@@ -430,6 +447,49 @@ function OrderList() {
                             selectedOrder.payment.paid_at
                           ).toLocaleString("vi-VN")}
                         </p>
+                      </div>
+                    )}
+
+                    {/* NÚT HOÀN TIỀN */}
+                    {selectedOrder.status === "Đã hủy" &&
+                      selectedOrder.payment.status === "Đã thanh toán" &&
+                      selectedOrder.payment.method !== "cod" &&
+                      !selectedOrder.payment.refunded && (
+                        <div className="md:col-span-2 mt-4">
+                          <button
+                            onClick={() =>
+                              handleRefundToWallet(selectedOrder._id)
+                            }
+                            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 
+                 hover:from-green-600 hover:to-emerald-700 
+                 text-white px-6 py-3 rounded-lg font-semibold 
+                 shadow-md transition flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle className="w-5 h-5" />
+                            Nhận hoàn tiền về ví
+                          </button>
+                        </div>
+                      )}
+
+                    {/* TRẠNG THÁI ĐÃ HOÀN TIỀN */}
+                    {selectedOrder.payment.refunded && (
+                      <div className="md:col-span-2 mt-4">
+                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-green-700">
+                            <CheckCircle className="w-5 h-5" />
+                            <span className="font-semibold">
+                              ✅ Đã hoàn tiền về ví
+                            </span>
+                          </div>
+                          {selectedOrder.refunded_at && (
+                            <p className="text-sm text-gray-600 mt-2">
+                              Thời gian:{" "}
+                              {new Date(
+                                selectedOrder.refunded_at
+                              ).toLocaleString("vi-VN")}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

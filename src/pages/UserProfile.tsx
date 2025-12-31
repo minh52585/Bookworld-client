@@ -3,6 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../configs/api";
+import { showNotification } from "../utils/notification";
 
 const UserProfile: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -20,6 +21,15 @@ const UserProfile: React.FC = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [page] = useState(1);
+  const [bankCards, setBankCards] = useState<any[]>([]);
+  const [loadingCards, setLoadingCards] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<string>(""); // ID thẻ được chọn
+  const [cardForm, setCardForm] = useState({
+    bankName: "Vietcombank",
+    accountNumber: "",
+    accountName: "",
+    isDefault: false,
+  });
   const limit = 20;
 
   useEffect(() => {
@@ -28,6 +38,7 @@ const UserProfile: React.FC = () => {
     } else {
       fetchWalletBalance();
       fetchTransactions();
+      fetchBankCards();
     }
   }, [isAuthenticated, navigate]);
 
@@ -45,7 +56,10 @@ const UserProfile: React.FC = () => {
     } catch (error: any) {
       console.error("Lỗi lấy số dư ví:", error);
       if (error.response?.status === 401) {
-        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+        showNotification(
+          "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!",
+          "error"
+        );
         logout();
         navigate("/login");
       }
@@ -81,23 +95,45 @@ const UserProfile: React.FC = () => {
       setLoadingTransactions(false);
     }
   };
+  const fetchBankCards = async () => {
+    setLoadingCards(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_BASE_URL}/withdrawalMethod`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
+      if (response.data?.data) {
+        setBankCards(response.data.data);
+        // Set thẻ mặc định làm thẻ được chọn
+        const defaultCard = response.data.data.find((c: any) => c.isDefault);
+        if (defaultCard) setSelectedCard(defaultCard._id);
+      }
+    } catch (error) {
+      console.error("Lỗi lấy danh sách thẻ:", error);
+    } finally {
+      setLoadingCards(false);
+    }
+  };
   const handleDeposit = async () => {
     const amount = parseInt(depositAmount);
 
     if (!amount || amount <= 0) {
-      alert("Vui lòng nhập số tiền hợp lệ!");
+      showNotification("Vui lòng nhập số tiền hợp lệ!", "error");
       return;
     }
 
     if (amount < 10000) {
-      alert("Số tiền nạp tối thiểu là 10,000đ!");
+      showNotification("Số tiền nạp tối thiểu là 10,000đ!", "error");
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      showNotification(
+        "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!",
+        "error"
+      );
       navigate("/login");
       return;
     }
@@ -121,7 +157,7 @@ const UserProfile: React.FC = () => {
       console.log("✅ Response nạp tiền:", response.data);
 
       if (response.data.success && response.data.data.paymentUrl) {
-        alert("Đang chuyển đến trang thanh toán VNPay...");
+        showNotification("Đang chuyển đến trang thanh toán VNPay...", "info");
 
         // Lưu transaction ID để tracking
         localStorage.setItem(
@@ -132,9 +168,10 @@ const UserProfile: React.FC = () => {
         // Chuyển hướng đến VNPay
         window.location.href = response.data.data.paymentUrl;
       } else {
-        alert(
+        showNotification(
           "Tạo lệnh nạp tiền thất bại: " +
-            (response.data.message || "Lỗi không xác định")
+            (response.data.message || "Lỗi không xác định"),
+          "error"
         );
       }
     } catch (error: any) {
@@ -155,7 +192,7 @@ const UserProfile: React.FC = () => {
         errorMsg = error.response.data.message;
       }
 
-      alert(errorMsg);
+      showNotification(errorMsg, "error");
     } finally {
       setLoadingDeposit(false);
     }
@@ -163,13 +200,18 @@ const UserProfile: React.FC = () => {
 
   const handleWithdraw = async () => {
     if (!withdrawAmount || withdrawAmount <= 0) {
-      alert("Vui lòng nhập số tiền hợp lệ");
+      showNotification("Vui lòng nhập số tiền hợp lệ", "error");
+      return;
+    }
+
+    if (!selectedCard) {
+      showNotification("Vui lòng chọn thẻ nhận tiền", "error");
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Phiên đăng nhập đã hết hạn");
+      showNotification("Phiên đăng nhập đã hết hạn", "error");
       navigate("/login");
       return;
     }
@@ -179,6 +221,7 @@ const UserProfile: React.FC = () => {
         `${API_BASE_URL}/walletTransaction/withdrawal`,
         {
           amount: Number(withdrawAmount),
+          withdrawalMethodId: selectedCard,
         },
         {
           headers: {
@@ -188,9 +231,14 @@ const UserProfile: React.FC = () => {
         }
       );
 
-      alert("Đã gửi yêu cầu rút tiền, chờ admin duyệt");
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Không thể gửi yêu cầu rút tiền");
+      showNotification("Đã gửi yêu cầu rút tiền, chờ admin duyệt", "success");
+      setShowWithdrawModal(false);
+      setWithdrawAmount("");
+    } catch (error: any) {
+      showNotification(
+        error.response?.data?.message || "Không thể rút tiền",
+        "error"
+      );
     }
   };
 
@@ -202,6 +250,88 @@ const UserProfile: React.FC = () => {
     );
   }
 
+  const handleAddCard = async (cardData: any) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await axios.post(
+        `${API_BASE_URL}/withdrawalMethod`,
+        {
+          bankName: cardData.bankName,
+          accountNumber: cardData.accountNumber.replace(/\s/g, ""),
+          accountName: cardData.accountName,
+          isDefault: cardData.isDefault || false,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        showNotification("Thêm thẻ thành công!", "success");
+        setShowAddCardModal(false);
+        fetchBankCards(); // Reload danh sách
+      }
+    } catch (error: any) {
+      showNotification(
+        error.response?.data?.message || "Không thể thêm thẻ",
+        "error"
+      );
+    }
+  };
+  const resetCardForm = () => {
+    setCardForm({
+      bankName: "Vietcombank",
+      accountNumber: "",
+      accountName: "",
+      isDefault: false,
+    });
+  };
+  const handleDeleteCard = async (cardId: string) => {
+    if (!window.confirm("Bạn có chắc muốn xóa thẻ này?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API_BASE_URL}/withdrawalMethod/${cardId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      showNotification("Xóa thẻ thành công!", "success");
+      fetchBankCards();
+    } catch (error: any) {
+      showNotification(
+        error.response?.data?.message || "Không thể xóa thẻ",
+        "error"
+      );
+    }
+  };
+
+  const handleSetDefaultCard = async (cardId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${API_BASE_URL}/withdrawalMethod/${cardId}`,
+        { isDefault: true },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      showNotification("Đã đặt thẻ mặc định!", "success");
+      fetchBankCards();
+    } catch (error: any) {
+      showNotification(
+        error.response?.data?.message || "Không thể cập nhật",
+        "error"
+      );
+    }
+  };
   const handleLogout = () => {
     if (window.confirm("Bạn có chắc muốn đăng xuất?")) {
       logout();
@@ -261,26 +391,6 @@ const UserProfile: React.FC = () => {
       labels[status] || { label: status, class: "bg-gray-100 text-gray-700" }
     );
   };
-
-  // Mock data cho demo thẻ ngân hàng
-  const mockBankCards = [
-    {
-      id: 1,
-      bankName: "Vietcombank",
-      cardNumber: "9704123456789012",
-      cardHolder: "NGUYEN VAN A",
-      expiryDate: "12/26",
-      isDefault: true,
-    },
-    {
-      id: 2,
-      bankName: "TPBank",
-      cardNumber: "9704987654321098",
-      cardHolder: "NGUYEN VAN A",
-      expiryDate: "08/27",
-      isDefault: false,
-    },
-  ];
 
   // Tính toán thống kê từ transactions thực tế
   const totalDeposit = transactions
@@ -537,52 +647,63 @@ const UserProfile: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {mockBankCards.map((card) => (
-                    <div key={card.id}>
-                      <div className="relative bg-gradient-to-br from-gray-800 via-gray-900 to-black text-white p-6 rounded-2xl shadow-2xl">
-                        {card.isDefault && (
-                          <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-3 py-1 rounded-full font-bold">
-                            <i className="fas fa-star mr-1"></i>
-                            Mặc định
-                          </div>
-                        )}
-                        <div className="flex justify-between items-start mb-8">
-                          <div className="text-xl font-bold">
-                            {card.bankName}
-                          </div>
-                          <i className="fas fa-credit-card text-3xl"></i>
-                        </div>
-                        <div className="text-xl tracking-wider mb-4 font-mono">
-                          {maskCardNumber(card.cardNumber)}
-                        </div>
-                        <div className="flex justify-between">
-                          <div>
-                            <div className="text-xs opacity-70">Chủ thẻ</div>
-                            <div className="font-semibold">
-                              {card.cardHolder}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs opacity-70">Hết hạn</div>
-                            <div className="font-semibold">
-                              {card.expiryDate}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-3">
-                        {!card.isDefault && (
-                          <button className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-2 rounded-lg text-sm font-semibold transition">
-                            Đặt mặc định
-                          </button>
-                        )}
-                        <button className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition">
-                          <i className="fas fa-trash mr-1"></i>
-                          Xóa thẻ
-                        </button>
-                      </div>
+                  {loadingCards ? (
+                    <div className="text-center py-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto"></div>
                     </div>
-                  ))}
+                  ) : bankCards.length === 0 ? (
+                    <div className="text-center py-10 col-span-2">
+                      <i className="fas fa-credit-card text-6xl text-gray-300 mb-4"></i>
+                      <p className="text-gray-600">Chưa có thẻ nào</p>
+                    </div>
+                  ) : (
+                    bankCards.map((card) => (
+                      <div key={card._id}>
+                        <div className="relative bg-gradient-to-br from-gray-800 via-gray-900 to-black text-white p-6 rounded-2xl shadow-2xl">
+                          {card.isDefault && (
+                            <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-3 py-1 rounded-full font-bold">
+                              <i className="fas fa-star mr-1"></i>
+                              Mặc định
+                            </div>
+                          )}
+                          <div className="flex justify-between items-start mb-8">
+                            <div className="text-xl font-bold">
+                              {card.bankName}
+                            </div>
+                            <i className="fas fa-credit-card text-3xl"></i>
+                          </div>
+                          <div className="text-xl tracking-wider mb-4 font-mono">
+                            {maskCardNumber(card.accountNumber)}
+                          </div>
+                          <div className="flex justify-between">
+                            <div>
+                              <div className="text-xs opacity-70">Chủ thẻ</div>
+                              <div className="font-semibold">
+                                {card.accountName}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                          {!card.isDefault && (
+                            <button
+                              onClick={() => handleSetDefaultCard(card._id)}
+                              className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                            >
+                              Đặt mặc định
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteCard(card._id)}
+                            className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
+                          >
+                            <i className="fas fa-trash mr-1"></i>
+                            Xóa thẻ
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -894,10 +1015,15 @@ const UserProfile: React.FC = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Rút về thẻ
               </label>
-              <select className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
-                {mockBankCards.map((c) => (
-                  <option key={c.id}>
-                    {c.bankName} - {maskCardNumber(c.cardNumber)}
+              <select
+                value={selectedCard}
+                onChange={(e) => setSelectedCard(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+              >
+                <option value="">-- Chọn thẻ nhận tiền --</option>
+                {bankCards.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.bankName} - {maskCardNumber(c.accountNumber)}
                   </option>
                 ))}
               </select>
@@ -961,6 +1087,7 @@ const UserProfile: React.FC = () => {
       )}
 
       {/* MODAL: Thêm thẻ */}
+
       {showAddCardModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -970,7 +1097,10 @@ const UserProfile: React.FC = () => {
                 Thêm thẻ ngân hàng
               </h3>
               <button
-                onClick={() => setShowAddCardModal(false)}
+                onClick={() => {
+                  setShowAddCardModal(false);
+                  resetCardForm();
+                }}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
               >
                 <i className="fas fa-times"></i>
@@ -978,11 +1108,18 @@ const UserProfile: React.FC = () => {
             </div>
 
             <div className="space-y-4">
+              {/* Ngân hàng */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Ngân hàng
+                  Ngân hàng <span className="text-red-500">*</span>
                 </label>
-                <select className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                <select
+                  value={cardForm.bankName}
+                  onChange={(e) =>
+                    setCardForm({ ...cardForm, bankName: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                >
                   <option>Vietcombank</option>
                   <option>TPBank</option>
                   <option>Techcombank</option>
@@ -990,60 +1127,63 @@ const UserProfile: React.FC = () => {
                   <option>BIDV</option>
                   <option>MB Bank</option>
                   <option>ACB</option>
+                  <option>Agribank</option>
+                  <option>Sacombank</option>
+                  <option>VPBank</option>
                 </select>
               </div>
 
+              {/* Số tài khoản */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Số thẻ
+                  Số tài khoản <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="0000 0000 0000 0000"
-                  maxLength={19}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  value={cardForm.accountNumber}
+                  onChange={(e) => {
+                    // Chỉ cho phép nhập số
+                    const value = e.target.value.replace(/\D/g, "");
+                    setCardForm({ ...cardForm, accountNumber: value });
+                  }}
+                  placeholder="Nhập số tài khoản"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Nhập số tài khoản ngân hàng (chỉ số)
+                </p>
               </div>
 
+              {/* Tên chủ tài khoản */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Tên chủ thẻ
+                  Tên chủ tài khoản <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  value={cardForm.accountName}
+                  onChange={(e) =>
+                    setCardForm({
+                      ...cardForm,
+                      accountName: e.target.value.toUpperCase(),
+                    })
+                  }
                   placeholder="NGUYEN VAN A"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 uppercase"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none uppercase"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Nhập đúng tên trên tài khoản ngân hàng (viết hoa, không dấu)
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Hết hạn
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="MM/YY"
-                    maxLength={5}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    CVV
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="123"
-                    maxLength={3}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-              </div>
-
+              {/* Checkbox mặc định */}
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={cardForm.isDefault}
+                  onChange={(e) =>
+                    setCardForm({ ...cardForm, isDefault: e.target.checked })
+                  }
                   className="w-5 h-5 text-purple-600 rounded"
                 />
                 <span className="text-sm text-gray-700">
@@ -1052,20 +1192,45 @@ const UserProfile: React.FC = () => {
               </label>
             </div>
 
+            {/* Button thêm thẻ */}
             <button
               onClick={() => {
-                alert("Thêm thẻ thành công!");
-                setShowAddCardModal(false);
+                // Validation
+                if (!cardForm.bankName) {
+                  showNotification("Vui lòng chọn ngân hàng!", "error");
+                  return;
+                }
+
+                if (
+                  !cardForm.accountNumber ||
+                  cardForm.accountNumber.length < 8
+                ) {
+                  showNotification(
+                    "Số tài khoản không hợp lệ (tối thiểu 8 số)!",
+                    "error"
+                  );
+                  return;
+                }
+
+                if (
+                  !cardForm.accountName ||
+                  cardForm.accountName.trim().length < 3
+                ) {
+                  showNotification("Tên chủ tài khoản không hợp lệ!", "error");
+                  return;
+                }
+
+                handleAddCard(cardForm);
+                resetCardForm();
               }}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-semibold shadow-md mt-6"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-semibold shadow-md mt-6 transition"
             >
               <i className="fas fa-plus-circle mr-2"></i>
-              Thêm thẻ
+              Thêm thẻ ngân hàng
             </button>
           </div>
         </div>
       )}
-
       {/* Font Awesome CDN */}
       <link
         rel="stylesheet"

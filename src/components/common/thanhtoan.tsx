@@ -6,6 +6,7 @@ import LoginModal from "../../pages/Auth/LoginModal";
 import axios from "axios";
 import { API_BASE_URL } from "../../configs/api";
 import { useLocation } from "react-router-dom";
+import { showNotification } from "../../utils/notification";
 
 function Thanhtoan() {
   const [cartItems, setCartItems] = useState<any[]>([]);
@@ -79,7 +80,10 @@ function Thanhtoan() {
     } catch (error: any) {
       console.error("Lỗi lấy số dư ví:", error);
       if (error.response?.status === 401) {
-        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+        showNotification(
+          "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!",
+          "error"
+        );
         navigate("/login");
       }
     } finally {
@@ -110,12 +114,12 @@ function Thanhtoan() {
       !formData.phone ||
       !formData.addressDetail
     ) {
-      alert("Vui lòng điền đầy đủ thông tin!");
+      showNotification("Vui lòng điền đầy đủ thông tin!", "error");
       return;
     }
 
     if (cartItems.length === 0) {
-      alert("Giỏ hàng trống!");
+      showNotification("Giỏ hàng trống!", "error");
       return;
     }
 
@@ -138,15 +142,19 @@ function Thanhtoan() {
         })
         .join("\n");
 
-      alert(
-        `Các sản phẩm sau không đủ số lượng:\n\n${itemNames}\n\nVui lòng giảm số lượng hoặc xóa khỏi giỏ hàng!`
+      showNotification(
+        `Các sản phẩm sau không đủ số lượng:\n\n${itemNames}\n\nVui lòng giảm số lượng hoặc xóa khỏi giỏ hàng!`,
+        "error"
       );
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      showNotification(
+        "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!",
+        "error"
+      );
       navigate("/login");
       return;
     }
@@ -192,7 +200,7 @@ function Thanhtoan() {
       });
 
       if (response.data.success) {
-        alert("Đặt hàng thành công!");
+        showNotification("Đặt hàng thành công!", "success");
         setCartItems([]);
 
         try {
@@ -212,9 +220,10 @@ function Thanhtoan() {
 
         navigate("/order", { replace: true });
       } else {
-        alert(
+        showNotification(
           "Đặt hàng thất bại: " +
-            (response.data.message || "Lỗi không xác định")
+            (response.data.message || "Lỗi không xác định"),
+          "error"
         );
       }
     } catch (error: any) {
@@ -236,7 +245,7 @@ function Thanhtoan() {
         errorMsg = error.response.data.message;
       }
 
-      alert(errorMsg);
+      showNotification(errorMsg, "error");
     } finally {
       setLoading(false);
     }
@@ -249,26 +258,30 @@ function Thanhtoan() {
       !formData.phone ||
       !formData.addressDetail
     ) {
-      alert("Vui lòng điền đầy đủ thông tin!");
+      showNotification("Vui lòng điền đầy đủ thông tin!", "error");
       return;
     }
 
     if (cartItems.length === 0) {
-      alert("Giỏ hàng trống!");
+      showNotification("Giỏ hàng trống!", "error");
       return;
     }
 
     // Kiểm tra số dư ví
     if (walletBalance < totalAmount) {
-      alert(
-        `Số dư ví không đủ!\nSố dư hiện tại: ${walletBalance.toLocaleString()}đ\nTổng thanh toán: ${totalAmount.toLocaleString()}đ\n\nVui lòng nạp thêm tiền vào ví!`
+      showNotification(
+        `Số dư ví không đủ!\nSố dư hiện tại: ${walletBalance.toLocaleString()}đ\nTổng thanh toán: ${totalAmount.toLocaleString()}đ\n\nVui lòng nạp thêm tiền vào ví!`,
+        "error"
       );
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      showNotification(
+        "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!",
+        "error"
+      );
       navigate("/login");
       return;
     }
@@ -310,7 +323,10 @@ function Thanhtoan() {
       console.log("✅ Response từ Wallet:", response.data);
 
       if (response.data.success) {
-        alert("Đặt hàng và thanh toán bằng ví thành công!");
+        showNotification(
+          "Đặt hàng và thanh toán bằng ví thành công!",
+          "success"
+        );
 
         // Cập nhật lại số dư ví
         await fetchWalletBalance();
@@ -334,9 +350,10 @@ function Thanhtoan() {
 
         navigate("/order", { replace: true });
       } else {
-        alert(
+        showNotification(
           "Đặt hàng thất bại: " +
-            (response.data.message || "Lỗi không xác định")
+            (response.data.message || "Lỗi không xác định"),
+          "error"
         );
       }
     } catch (error: any) {
@@ -358,7 +375,7 @@ function Thanhtoan() {
         errorMsg = error.response.data.message;
       }
 
-      alert(errorMsg);
+      showNotification(errorMsg, "error");
     } finally {
       setLoading(false);
     }
@@ -371,18 +388,21 @@ function Thanhtoan() {
       !formData.phone ||
       !formData.addressDetail
     ) {
-      alert("Vui lòng điền đầy đủ thông tin!");
+      showNotification("Vui lòng điền đầy đủ thông tin!", "error");
       return;
     }
 
     if (cartItems.length === 0) {
-      alert("Giỏ hàng trống!");
+      showNotification("Giỏ hàng trống!", "error");
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      showNotification(
+        "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!",
+        "error"
+      );
       navigate("/login");
       return;
     }
@@ -425,12 +445,13 @@ function Thanhtoan() {
 
       if (response.data.success && response.data.data.paymentUrl) {
         localStorage.setItem("pending_order_id", response.data.orderId);
-        alert("Đang chuyển đến trang thanh toán VNPay...");
+        showNotification("Đang chuyển đến trang thanh toán VNPay...", "info");
         window.location.href = response.data.data.paymentUrl;
       } else {
-        alert(
+        showNotification(
           "Tạo link thanh toán thất bại: " +
-            (response.data.message || "Lỗi không xác định")
+            (response.data.message || "Lỗi không xác định"),
+          "error"
         );
       }
     } catch (error: any) {
@@ -452,7 +473,7 @@ function Thanhtoan() {
         errorMsg = error.response.data.message;
       }
 
-      alert(errorMsg);
+      showNotification(errorMsg, "error");
     } finally {
       setLoading(false);
     }
