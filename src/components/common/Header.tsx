@@ -467,9 +467,15 @@ const Header = () => {
 
         <div className="flex items-center justify-between px-6 py-3 border-b-2 border-purple-200 bg-white">
           <div className="flex items-center space-x-6 text-gray-700">
+            <a href="#" className="hover:text-purple-600">
+              Giới thiệu
+            </a>
+            <a href="/allproducts" className="hover:text-purple-600">
+              Sản phẩm
+            </a>
             <div className="relative group">
               <span className="hover:text-purple-600 cursor-pointer">
-                Sách nên đọc
+                Danh mục
               </span>
 
               <div
@@ -491,6 +497,10 @@ const Header = () => {
 
             <a href="#" className="hover:text-purple-600">
               Khuyến mãi tháng
+            </a>
+
+            <a href="#" className="hover:text-purple-600">
+              Liên hệ
             </a>
           </div>
 
