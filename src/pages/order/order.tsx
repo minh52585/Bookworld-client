@@ -672,9 +672,13 @@ function OrderList() {
                           color: STATUS_CONFIG[log.status]?.color || "blue",
                           children: (
                             <>
-                              <strong>{log.status}</strong>
+                              {/* <strong>{log.status}</strong>
                               {log.note && <div>{log.note}</div>}
                               <small>
+                                {new Date(log.createdAt).toLocaleString("vi-VN")}
+                              </small> */}
+                              <strong style={{ display: "block" }}>{log.status}</strong>
+                              <small style={{ color: "#888" }}>
                                 {new Date(log.createdAt).toLocaleString("vi-VN")}
                               </small>
                             </>
