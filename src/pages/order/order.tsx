@@ -18,7 +18,22 @@ import {
 } from "lucide-react";
 import CancelOrderModal from "../../components/modals/CancelOrderModal";
 import { StickyNote } from "lucide-react";
-
+import {Timeline, Divider} from "antd";
+import {
+  EditOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  TruckOutlined,
+  ShoppingOutlined,
+} from "@ant-design/icons";
+const STATUS_CONFIG: Record<string, { color: string; icon?: React.ReactNode }> = {
+  "Chờ xử lý": { color: "orange", icon: <ShoppingOutlined /> },
+  "Đã xác nhận": { color: "blue", icon: <CheckOutlined /> },
+  "Đang chuẩn bị hàng": { color: "cyan", icon: <ShoppingOutlined /> },
+  "Đang giao hàng": { color: "purple", icon: <TruckOutlined /> },
+  "Giao hàng không thành công": { color: "red", icon: <CloseOutlined /> },
+  "Giao hàng thành công": { color: "green", icon: <CheckOutlined /> },
+};
 function OrderList() {
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -647,7 +662,27 @@ function OrderList() {
                   Đóng
                 </button>
               </div>
-            </div>
+
+
+                    <Divider orientation="left">Lịch sử thay đổi trạng thái đơn hàng</Divider>
+                    <div style={{ paddingLeft: 24 }}>
+
+                      <Timeline
+                        items={selectedOrder.status_logs?.map((log: any) => ({
+                          color: STATUS_CONFIG[log.status]?.color || "blue",
+                          children: (
+                            <>
+                              <strong>{log.status}</strong>
+                              {log.note && <div>{log.note}</div>}
+                              <small>
+                                {new Date(log.createdAt).toLocaleString("vi-VN")}
+                              </small>
+                            </>
+                          ),
+                        }))}
+                      />
+                    </div>
+              </div>
           </div>
         )}
       </div>
