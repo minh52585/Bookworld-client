@@ -18,7 +18,7 @@ import axios from 'axios'
 // Set config defaults when creating the instance
 const api = axios.create({
   // Use Vite env var if provided, otherwise fall back to the local BE URL the user requested
- baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:5004/api',
+ baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:5004api',
 
 })
 

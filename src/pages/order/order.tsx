@@ -94,6 +94,30 @@ function OrderList() {
     navigate("/");
   };
 
+  const handleRequestReturnOrder = async (orderId: string) => {
+  if (!window.confirm("Bạn chắc chắn muốn yêu cầu Trả hàng/Hoàn tiền?")) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    const res = await axios.post(
+      `${API_BASE_URL}/orders/return-request/${orderId}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    showNotification(res.data.message || "Đã gửi yêu cầu Trả hàng/Hoàn tiền", "success");
+    fetchOrders();
+  } catch (error: any) {
+    const msg =
+      error.response?.data?.message || "Không thể gửi yêu cầu Trả hàng/Hoàn tiền";
+    showNotification(msg, "error");
+  }
+};
+
   if (!isAuthenticated) {
     return (
       <LoginModal
@@ -147,11 +171,24 @@ function OrderList() {
       icon: <CheckCheck className="w-4 h-4" />,
       className: "bg-green-100 text-green-700 border border-green-300",
     },
-    "Trả hàng/Hoàn tiền": {
-      label: "Trả hàng/Hoàn tiền",
-      icon: <RotateCcw className="w-4 h-4" />,
-      className: "bg-purple-100 text-purple-700 border border-purple-300",
+    "Đang yêu cầu Trả hàng/Hoàn tiền": {
+      label: "Đang yêu cầu Trả hàng/Hoàn tiền",
+      icon: <RotateCcw className="w-4 h-4 animate-spin" />,
+      className: "bg-yellow-100 text-yellow-800 border border-yellow-300",
     },
+
+    "Trả hàng/Hoàn tiền thành công": {
+      label: "Trả hàng/Hoàn tiền thành công",
+      icon: <CheckCircle className="w-4 h-4" />,
+      className: "bg-green-100 text-green-700 border border-green-300",
+    },
+
+    "Hoàn tất": {
+      label: "Hoàn tất",
+      icon: <CheckCheck className="w-4 h-4" />,
+      className: "bg-blue-100 text-blue-700 border border-blue-300",
+    },
+   
   };
 
   //  Function để hiển thị trạng thái thanh toán
@@ -313,7 +350,18 @@ function OrderList() {
                           Hủy đơn
                         </button>
                       )}
-                    </td>
+                        {order.status === "Giao hàng thành công" &&
+                          order.returnStatus !== "RETURN_REQUESTED" && (
+                            <button
+                              className="inline-flex items-center gap-2 bg-orange-500 text-white px-4 py-2 
+                                        rounded-lg hover:bg-orange-600 transition ml-2"
+                              onClick={() => handleRequestReturnOrder(order._id)}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                              Yêu cầu Trả hàng/Hoàn tiền
+                            </button>
+                          )}
+                        </td>
                   </tr>
                 ))}
               </tbody>
