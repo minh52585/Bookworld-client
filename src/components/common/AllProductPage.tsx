@@ -367,13 +367,21 @@ const AllProducts: React.FC = () => {
                     </label>
                     <input
                       type="number"
+                      min="0"
+                      step="1000"
                       value={filters.minPrice}
                       onChange={(e) => {
+                        const value = Math.max(0, Number(e.target.value));
                         setFilters((prev) => ({
                           ...prev,
-                          minPrice: Number(e.target.value),
+                          minPrice: value,
                         }));
                         setPage(1);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E") {
+                          e.preventDefault();
+                        }
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       placeholder="0"
@@ -385,13 +393,21 @@ const AllProducts: React.FC = () => {
                     </label>
                     <input
                       type="number"
+                      min="0"
+                      step="1000"
                       value={filters.maxPrice}
                       onChange={(e) => {
+                        const value = Math.max(0, Number(e.target.value));
                         setFilters((prev) => ({
                           ...prev,
-                          maxPrice: Number(e.target.value),
+                          maxPrice: value,
                         }));
                         setPage(1);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E") {
+                          e.preventDefault();
+                        }
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       placeholder="1000000"

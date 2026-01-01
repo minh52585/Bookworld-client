@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import LoginModal from "../../pages/Auth/LoginModal";
 import { API_BASE_URL } from "../../configs/api";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 
 type Book = {
   _id?: string;
@@ -13,7 +13,14 @@ type Book = {
   author: string;
   price: number | string;
   images: string[];
-  category?: string;
+  category?: {
+    _id: string;
+    name: string;
+  };
+  displayPrice?: number;
+  minPrice?: number;
+  averageRating?: number;
+  reviewCount?: number;
   description?: string;
 };
 
@@ -49,29 +56,69 @@ const BookCard = ({
 
   return (
     <div
-      className="bg-white border rounded-lg shadow-sm hover:shadow-md p-4 flex flex-col transition-all duration-300 cursor-pointer flex-shrink-0 w-64"
+      className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer flex-shrink-0 w-64"
       onClick={handleCardClick}
     >
-      <img
-        src={getImageUrl()}
-        alt={getBookName()}
-        className="h-60 w-full object-cover rounded mb-4"
-        onError={(e) => {
-          e.currentTarget.onerror = null;
-          e.currentTarget.src =
-            'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-        }}
-      />
-      <h3 className="font-semibold text-gray-800 line-clamp-2 mb-2">
-        {getBookName()}
-      </h3>
-      <p className="text-sm text-gray-600 mb-2">Tác giả: {book.author}</p>
-      <button
-        onClick={handleCardClick}
-        className="bg-[#4f0f87] hover:bg-[#51348f] text-white py-2 px-3 rounded mt-auto transition-colors duration-200"
-      >
-        Xem chi tiết
-      </button>
+      {/* Image với Category Badge */}
+      <div className="aspect-[3/4] overflow-hidden bg-gray-100 relative">
+        <img
+          src={getImageUrl()}
+          alt={getBookName()}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src =
+              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+          }}
+        />
+        {/* Category Badge */}
+        {book.category && (
+          <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+            {book.category.name}
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        <h3 className="font-medium text-gray-900 mb-1 line-clamp-2 h-12 group-hover:text-blue-600 transition-colors">
+          {getBookName()}
+        </h3>
+        <p className="text-sm text-gray-600 mb-3">{book.author}</p>
+
+        {/* Rating */}
+        <div className="flex items-center gap-1 mb-3">
+          {[...Array(5)].map((_, i) => (
+            <Star
+              key={i}
+              className={`w-4 h-4 ${
+                i < Math.floor(book.averageRating || 0)
+                  ? "fill-yellow-400 text-yellow-400"
+                  : "text-gray-300"
+              }`}
+            />
+          ))}
+          <span className="text-sm text-gray-600 ml-1">
+            ({book.reviewCount || 0})
+          </span>
+        </div>
+
+        {/* Price & Button */}
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-lg font-bold text-red-600">
+              {book.displayPrice || book.minPrice
+                ? (book.displayPrice || book.minPrice)!.toLocaleString(
+                    "vi-VN"
+                  ) + "₫"
+                : "Liên hệ"}
+            </span>
+          </div>
+          <button className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors shadow-sm">
+            Xem chi tiết
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
