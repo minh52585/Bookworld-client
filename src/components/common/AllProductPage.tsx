@@ -35,6 +35,7 @@ interface Product {
   size: string;
   sku: string;
   minPrice?: number;
+  displayPrice?: number;
   averageRating?: number;
   reviewCount?: number;
   createdAt: string;
@@ -59,7 +60,6 @@ interface ApiResponse {
     limit: number;
   };
 }
-
 
 // ============= MAIN COMPONENT =============
 const AllProducts: React.FC = () => {
@@ -105,8 +105,12 @@ const AllProducts: React.FC = () => {
 
   // Fetch products with filters
   useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
     const fetchProducts = async () => {
       setLoading(true);
+      setProducts([]);
       try {
         const params = new URLSearchParams({
           page: page.toString(),
@@ -117,50 +121,62 @@ const AllProducts: React.FC = () => {
         if (filters.categories.length > 0)
           params.append("category", filters.categories[0]);
         if (filters.sortBy) params.append("sort", filters.sortBy);
+        if (filters.rating)
+          params.append("minRating", filters.rating.toString());
+        if (filters.minPrice > 0)
+          params.append("minPrice", filters.minPrice.toString());
+        if (filters.maxPrice < 1000000)
+          params.append("maxPrice", filters.maxPrice.toString());
 
         const response = await fetch(
-          `${API_BASE_URL}/products?${params.toString()}`
+          `${API_BASE_URL}/products?${params.toString()}`,
+          { signal: controller.signal } // Thêm signal để có thể cancel
         );
         const data: ApiResponse = await response.json();
 
-        console.log("Products response:", data); // DEBUG
+        console.log("📦 Products fetched:", data.data?.items?.length);
 
-        // Kiểm tra structure response
         if (!data.data || !data.data.items) {
-          console.error("Products response format không đúng:", data);
-          setProducts([]);
-          setTotal(0);
+          if (isMounted) {
+            setProducts([]);
+            setTotal(0);
+          }
           return;
         }
 
-        let filteredProducts = data.data.items;
+        // Loại bỏ duplicate
+        const uniqueProducts = Array.from(
+          new Map(data.data.items.map((item) => [item._id, item])).values()
+        );
 
-        // Client-side filters (vì BE chưa có)
-        if (filters.rating) {
-          filteredProducts = filteredProducts.filter(
-            (p) => (p.averageRating || 0) >= filters.rating!
-          );
+        if (isMounted) {
+          setProducts(uniqueProducts);
+          setTotal(data.data.total);
         }
-        if (filters.minPrice > 0 || filters.maxPrice < 1000000) {
-          filteredProducts = filteredProducts.filter(
-            (p) =>
-              (p.minPrice || 0) >= filters.minPrice &&
-              (p.minPrice || 0) <= filters.maxPrice
-          );
+      } catch (error: any) {
+        // Bỏ qua lỗi abort (khi component unmount)
+        if (error.name === "AbortError") {
+          console.log("🚫 Fetch aborted");
+          return;
         }
-
-        setProducts(filteredProducts);
-        setTotal(data.data.total);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setProducts([]);
-        setTotal(0);
+        console.error("❌ Error fetching products:", error);
+        if (isMounted) {
+          setProducts([]);
+          setTotal(0);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProducts();
+
+    return () => {
+      isMounted = false;
+      controller.abort(); // Cancel request khi unmount
+    };
   }, [page, limit, filters]);
   const handleProductClick = (id: string) => {
     if (!id) return;
@@ -351,13 +367,21 @@ const AllProducts: React.FC = () => {
                     </label>
                     <input
                       type="number"
+                      min="0"
+                      step="1000"
                       value={filters.minPrice}
                       onChange={(e) => {
+                        const value = Math.max(0, Number(e.target.value));
                         setFilters((prev) => ({
                           ...prev,
-                          minPrice: Number(e.target.value),
+                          minPrice: value,
                         }));
                         setPage(1);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E") {
+                          e.preventDefault();
+                        }
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       placeholder="0"
@@ -369,13 +393,21 @@ const AllProducts: React.FC = () => {
                     </label>
                     <input
                       type="number"
+                      min="0"
+                      step="1000"
                       value={filters.maxPrice}
                       onChange={(e) => {
+                        const value = Math.max(0, Number(e.target.value));
                         setFilters((prev) => ({
                           ...prev,
-                          maxPrice: Number(e.target.value),
+                          maxPrice: value,
                         }));
                         setPage(1);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E") {
+                          e.preventDefault();
+                        }
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       placeholder="1000000"
@@ -466,8 +498,9 @@ const AllProducts: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-lg font-bold text-red-600">
-                              {product.displayPrice
-                                ? product.displayPrice.toLocaleString("vi-VN") +
+                              {product.displayPrice ?? product.minPrice
+                                ? (product.displayPrice ??
+                                    product.minPrice)!.toLocaleString("vi-VN") +
                                   "₫"
                                 : "Liên hệ"}
                             </span>
