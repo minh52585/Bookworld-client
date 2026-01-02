@@ -18,7 +18,23 @@ import {
 } from "lucide-react";
 import CancelOrderModal from "../../components/modals/CancelOrderModal";
 import { StickyNote } from "lucide-react";
-
+import { Timeline, Divider } from "antd";
+import {
+  EditOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  TruckOutlined,
+  ShoppingOutlined,
+} from "@ant-design/icons";
+const STATUS_CONFIG: Record<string, { color: string; icon?: React.ReactNode }> =
+  {
+    "Chờ xử lý": { color: "orange", icon: <ShoppingOutlined /> },
+    "Đã xác nhận": { color: "blue", icon: <CheckOutlined /> },
+    "Đang chuẩn bị hàng": { color: "cyan", icon: <ShoppingOutlined /> },
+    "Đang giao hàng": { color: "purple", icon: <TruckOutlined /> },
+    "Giao hàng không thành công": { color: "red", icon: <CloseOutlined /> },
+    "Giao hàng thành công": { color: "green", icon: <CheckOutlined /> },
+  };
 function OrderList() {
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -95,28 +111,33 @@ function OrderList() {
   };
 
   const handleRequestReturnOrder = async (orderId: string) => {
-  if (!window.confirm("Bạn chắc chắn muốn yêu cầu Trả hàng/Hoàn tiền?")) return;
+    if (!window.confirm("Bạn chắc chắn muốn yêu cầu Trả hàng/Hoàn tiền?"))
+      return;
 
-  try {
-    const token = localStorage.getItem("token");
-    const res = await axios.post(
-      `${API_BASE_URL}/orders/return-request/${orderId}`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API_BASE_URL}/orders/return-request/${orderId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    showNotification(res.data.message || "Đã gửi yêu cầu Trả hàng/Hoàn tiền", "success");
-    fetchOrders();
-  } catch (error: any) {
-    const msg =
-      error.response?.data?.message || "Không thể gửi yêu cầu Trả hàng/Hoàn tiền";
-    showNotification(msg, "error");
-  }
-};
+      showNotification(
+        res.data.message || "Đã gửi yêu cầu Trả hàng/Hoàn tiền",
+        "success"
+      );
+      fetchOrders();
+    } catch (error: any) {
+      const msg =
+        error.response?.data?.message ||
+        "Không thể gửi yêu cầu Trả hàng/Hoàn tiền";
+      showNotification(msg, "error");
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -188,7 +209,6 @@ function OrderList() {
       icon: <CheckCheck className="w-4 h-4" />,
       className: "bg-blue-100 text-blue-700 border border-blue-300",
     },
-   
   };
 
   //  Function để hiển thị trạng thái thanh toán
@@ -330,38 +350,55 @@ function OrderList() {
                         <span className="text-gray-400 italic">—</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
-                        onClick={() => setSelectedOrder(order)}
-                      >
-                        <Eye className="w-4 h-4" />
-                        Chi tiết
-                      </button>
-                      {order.status === "Chờ xử lý" && (
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        {/* Chi tiết */}
                         <button
-                          className="inline-flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition ml-2"
-                          onClick={() => {
-                            setCancelOrderId(order._id);
-                            setShowCancelModal(true);
-                          }}
+                          className="inline-flex items-center gap-1.5 h-8 px-3 
+                 text-xs font-medium text-white 
+                 bg-purple-600 hover:bg-purple-700 
+                 rounded-md transition whitespace-nowrap"
+                          onClick={() => setSelectedOrder(order)}
                         >
-                          <XCircle className="w-4 h-4" />
-                          Hủy đơn
+                          <Eye className="w-3.5 h-3.5" />
+                          Chi tiết
                         </button>
-                      )}
+
+                        {/* Hủy đơn */}
+                        {order.status === "Chờ xử lý" && (
+                          <button
+                            className="inline-flex items-center gap-1.5 h-8 px-3 
+                   text-xs font-medium text-white 
+                   bg-red-500 hover:bg-red-600 
+                   rounded-md transition whitespace-nowrap"
+                            onClick={() => {
+                              setCancelOrderId(order._id);
+                              setShowCancelModal(true);
+                            }}
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            Hủy đơn
+                          </button>
+                        )}
+
+                        {/* Trả hàng / hoàn tiền */}
                         {order.status === "Giao hàng thành công" &&
                           order.returnStatus !== "RETURN_REQUESTED" && (
                             <button
-                              className="inline-flex items-center gap-2 bg-orange-500 text-white px-4 py-2 
-                                        rounded-lg hover:bg-orange-600 transition ml-2"
-                              onClick={() => handleRequestReturnOrder(order._id)}
+                              className="inline-flex items-center gap-1.5 h-8 px-3 
+                     text-xs font-medium text-white 
+                     bg-orange-500 hover:bg-orange-600 
+                     rounded-md transition whitespace-nowrap"
+                              onClick={() =>
+                                handleRequestReturnOrder(order._id)
+                              }
                             >
-                              <RotateCcw className="w-4 h-4" />
-                              Yêu cầu Trả hàng/Hoàn tiền
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              Trả / Hoàn
                             </button>
                           )}
-                        </td>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -646,6 +683,32 @@ function OrderList() {
                 >
                   Đóng
                 </button>
+              </div>
+
+              <Divider orientation="left">
+                Lịch sử thay đổi trạng thái đơn hàng
+              </Divider>
+              <div style={{ paddingLeft: 24 }}>
+                <Timeline
+                  items={selectedOrder.status_logs?.map((log: any) => ({
+                    color: STATUS_CONFIG[log.status]?.color || "blue",
+                    children: (
+                      <>
+                        {/* <strong>{log.status}</strong>
+                              {log.note && <div>{log.note}</div>}
+                              <small>
+                                {new Date(log.createdAt).toLocaleString("vi-VN")}
+                              </small> */}
+                        <strong style={{ display: "block" }}>
+                          {log.status}
+                        </strong>
+                        <small style={{ color: "#888" }}>
+                          {new Date(log.createdAt).toLocaleString("vi-VN")}
+                        </small>
+                      </>
+                    ),
+                  }))}
+                />
               </div>
             </div>
           </div>
