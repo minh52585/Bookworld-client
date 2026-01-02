@@ -513,7 +513,7 @@ const Header = () => {
                 className="fas fa-phone-alt mr-1"
                 style={{ transform: "scaleX(-1)" }}
               />
-              +84 445 87 999 000
+              0372572892
             </span>
 
             <button className="border border-purple-600 text-purple-600 px-4 py-1 rounded hover:bg-purple-600 hover:text-white transition">

@@ -5,7 +5,6 @@ import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "./Auth/LoginModal";
 import { API_BASE_URL } from "../configs/api";
 import { showNotification } from "../utils/notification";
-import { error } from "console";
 
 interface Product {
   _id: string;
@@ -526,8 +525,7 @@ const BookDetailPage: React.FC = () => {
   };
 
   const handleDeleteReview = async () => {
-    if (!userReview || !window.confirm("Bạn có chắc muốn xóa đánh giá này?"))
-      return;
+    if (!userReview) return;
 
     try {
       await axios.delete(`${API_BASE_URL}/reviews/${userReview._id}`, {
@@ -536,22 +534,24 @@ const BookDetailPage: React.FC = () => {
         },
       });
 
-      setReviews(reviews.filter((r) => r._id !== userReview._id));
+      const updatedReviews = reviews.filter((r) => r._id !== userReview._id);
+
+      setReviews(updatedReviews);
       setUserReview(null);
       setShowReviewForm(false);
       setReviewComment("");
       setReviewRating(5);
 
-      // Recalculate average
-      const remainingReviews = reviews.filter((r) => r._id !== userReview._id);
-      if (remainingReviews.length > 0) {
-        const sum = remainingReviews.reduce((acc, r) => acc + r.rating, 0);
-        setAverageRating(sum / remainingReviews.length);
+      if (updatedReviews.length > 0) {
+        const sum = updatedReviews.reduce((acc, r) => acc + r.rating, 0);
+        setAverageRating(sum / updatedReviews.length);
       } else {
         setAverageRating(0);
       }
+
+      showNotification("Đã xóa đánh giá thành công", "success");
     } catch (err: any) {
-      alert(getErrorMessage(err));
+      showNotification("error", getErrorMessage(err));
     }
   };
 
