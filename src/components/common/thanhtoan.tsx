@@ -14,7 +14,69 @@ function Thanhtoan() {
   const [loading, setLoading] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [loadingWallet, setLoadingWallet] = useState(false);
+  const [coupon, setCoupon] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [appliedItems, setAppliedItems] = useState<any[]>([]);
+
   const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    // reset discount if cart items changed
+    setDiscountAmount(0);
+    setAppliedItems([]);
+    setCouponError("");
+  }, [cartItems.length]);
+
+  const applyCouponAtCheckout = async () => {
+    if (!coupon) return;
+
+    setApplyingCoupon(true);
+    setCouponError("");
+
+    try {
+      const token = localStorage.getItem("token") || undefined;
+      const items = cartItems
+        .filter((item) => item.product_id)
+        .map((item) => ({
+          product_id: item.product_id._id,
+          price: item.variant_id?.price ?? item.product_id?.price ?? 0,
+          quantity: item.quantity,
+        }));
+
+      const subtotalSelected = items.reduce(
+        (s, it) => s + (it.price || 0) * it.quantity,
+        0
+      );
+
+      const resp = await (await import('../../apis/discounts')).validateDiscount({
+        code: coupon,
+        items,
+        subtotal: subtotalSelected,
+      }, token);
+
+      const data = resp.data;
+      if (!data || !data.valid) {
+        setCouponError(data?.message || 'Mã không hợp lệ');
+        setDiscountAmount(0);
+        setAppliedItems([]);
+      } else {
+        if (data.appliedItems && Array.isArray(data.appliedItems)) {
+          setAppliedItems(data.appliedItems);
+          const total = data.appliedItems.reduce((s:any, a:any) => s + (a.discountAmount || 0), 0);
+          setDiscountAmount(total || 0);
+        } else if (data.amount !== undefined) {
+          const total = data.amount || 0;
+          setDiscountAmount(total);
+        }
+      }
+    } catch (err:any) {
+      setCouponError(err.response?.data?.message || 'Lỗi khi kiểm tra mã');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,6 +108,24 @@ function Thanhtoan() {
     }
 
     setCartItems(selectedItems);
+
+    // load pending discount if user applied one in Cart or Promotions
+    try {
+      const pending = localStorage.getItem('pending_discount');
+      if (pending) {
+        const p = JSON.parse(pending);
+        setCoupon(p.code || '');
+        setDiscountAmount(p.amount || 0);
+        setAppliedItems(p.appliedItems || []);
+        if (p.code) {
+          // auto-validate when coming from promotions
+          setTimeout(() => applyCouponAtCheckout(), 300);
+        }
+      }
+    } catch (err) {
+      console.warn('No pending discount', err);
+    }
+
     fetchUserInfo();
     fetchWalletBalance();
   }, [isAuthenticated]);
@@ -105,7 +185,8 @@ function Thanhtoan() {
   }, 0);
 
   const phiShip = 30000;
-  const totalAmount = total + phiShip;
+  const totalAmountBeforeDiscount = total + phiShip;
+  const totalAmount = Math.max(0, totalAmountBeforeDiscount - discountAmount);
 
   const handleSubmitOrderCOD = async () => {
     if (
@@ -183,11 +264,8 @@ function Thanhtoan() {
             image: item.product_id.images?.[0] || "",
           })),
         subtotal: total,
-        shipping_fee: phiShip,
-        discount: {
-          code: "",
-          amount: 0,
-        },
+        shipping_fee: phiShip,  
+          discountCode: coupon || "",
         total: totalAmount,
         note: "",
       };
@@ -296,17 +374,22 @@ function Thanhtoan() {
             product_id: item.product_id._id,
             variant_id: item.variant_id._id,
             quantity: item.quantity,
+            price: item.variant_id?.price ?? item.product_id.price,
           })),
         shipping_address: {
           name: formData.fullName,
           phone: formData.phone,
           address: formData.addressDetail,
         },
+        subtotal: total,
         shipping_fee: phiShip,
+        total: totalAmount,
         note: "",
         discountCode: "",
       };
 
+      orderData.discountCode = coupon || "";
+      orderData.discount = { code: coupon || "", amount: discountAmount || 0, appliedItems: appliedItems || [] };
       console.log("📦 Đang gửi đơn hàng thanh toán ví:", orderData);
 
       const response = await axios.post(
@@ -417,17 +500,22 @@ function Thanhtoan() {
             product_id: item.product_id._id,
             variant_id: item.variant_id._id,
             quantity: item.quantity,
+            price: item.variant_id?.price ?? item.product_id.price,
           })),
         shipping_address: {
           name: formData.fullName,
           phone: formData.phone,
           address: formData.addressDetail,
         },
+        subtotal: total,
         shipping_fee: phiShip,
+        total: totalAmount,
         note: "",
         discountCode: "",
       };
 
+      orderData.discountCode = coupon || "";
+      orderData.discount = { code: coupon || "", amount: discountAmount || 0, appliedItems: appliedItems || [] };
       console.log("📦 Đang gửi đơn hàng VNPay:", orderData);
 
       const response = await axios.post(
@@ -744,14 +832,32 @@ function Thanhtoan() {
                         </p>
 
                         <p className="text-sm text-gray-600">
-                          Đơn giá:{" "}
+                          Đơn giá: {" "}
                           <span className="font-medium">
-                            {price.toLocaleString()}đ
-                          </span>
+                            {(() => {
+                              const match = appliedItems.find(a => String(a.product_id) === String(product._id));
+                              if (match && match.discountAmount) {
+                                const perItemDiscount = match.discountAmount / item.quantity;
+                                const discountedPrice = Math.max(0, (price ?? 0) - perItemDiscount);
+                                return (
+                                  <>
+                                    <span className="line-through text-gray-400 mr-2">{(price ?? 0).toLocaleString()}đ</span>
+                                    <span className="text-purple-600">{Math.round(discountedPrice).toLocaleString()}đ</span>
+                                  </>
+                                );
+                              }
+                              return `${price.toLocaleString()}đ`;
+                            })()}</span>
                         </p>
 
                         <p className="font-bold text-purple-600 text-lg">
-                          Tổng: {totalPrice.toLocaleString()}đ
+                          Tổng: {(() => {
+                            const match = appliedItems.find(a => String(a.product_id) === String(product._id));
+                            if (match && match.discountAmount) {
+                              return (Math.max(0, (price ?? 0) * item.quantity - (match.discountAmount || 0))).toLocaleString() + 'đ';
+                            }
+                            return totalPrice.toLocaleString() + 'đ';
+                          })()}
                         </p>
                       </div>
                     </div>
@@ -759,6 +865,53 @@ function Thanhtoan() {
                 })}
 
                 <div className="border-t pt-4 space-y-3">
+                  <div className="mb-4">
+                    <label className="text-sm text-gray-600">Mã giảm giá</label>
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        value={coupon}
+                        onChange={(e) => setCoupon(e.target.value)}
+                        placeholder="Nhập mã giảm giá"
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                      />
+                      <button
+                        onClick={applyCouponAtCheckout}
+                        disabled={!coupon || applyingCoupon}
+                        className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                          !coupon || applyingCoupon
+                            ? 'bg-gray-300 cursor-not-allowed'
+                            : 'bg-purple-600 text-white hover:bg-purple-700'
+                        }`}
+                      >
+                        {applyingCoupon ? 'Đang kiểm tra...' : 'Áp dụng'}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p className="text-sm text-red-500 mt-2">{couponError}</p>
+                    )}
+
+                    {discountAmount > 0 && (
+                      <div className="mt-3">
+                        <div className="inline-flex items-center gap-3 bg-purple-600 text-white px-3 py-1 rounded-full">
+                          <span className="font-semibold tracking-wide">{(coupon || '').toUpperCase()}</span>
+                          <span className="text-sm opacity-90">- {discountAmount.toLocaleString()}đ</span>
+                          <button
+                            onClick={() => {
+                              setCoupon('');
+                              setDiscountAmount(0);
+                              setAppliedItems([]);
+                              setCouponError('');
+                              try { localStorage.removeItem('pending_discount'); } catch(e) {}
+                            }}
+                            className="ml-2 text-xs bg-white/20 hover:bg-white/30 rounded px-2 py-0.5">
+                            Hủy
+                          </button>
+                        </div>
+                        <p className="text-sm text-gray-700 mt-2">Mã đã được áp dụng — bạn sẽ thấy giá đã giảm ở các sản phẩm tương ứng.</p>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-between text-gray-700">
                     <span>Tổng tiền hàng:</span>
                     <span className="font-medium">
@@ -771,6 +924,11 @@ function Thanhtoan() {
                     <span className="font-medium">
                       {phiShip.toLocaleString()}đ
                     </span>
+                  </div>
+
+                  <div className="flex justify-between text-gray-700">
+                    <span>Giảm giá:</span>
+                    <span className="font-medium text-green-600">-{discountAmount.toLocaleString()}đ</span>
                   </div>
 
                   <div className="flex justify-between font-bold text-xl text-purple-600 pt-3 border-t">
