@@ -467,6 +467,9 @@ const Header = () => {
 
         <div className="flex items-center justify-between px-6 py-3 border-b-2 border-purple-200 bg-white">
           <div className="flex items-center space-x-6 text-gray-700">
+            <a href="/" className="hover:text-purple-600">
+              Trang chủ
+            </a>
             <a href="#" className="hover:text-purple-600">
               Giới thiệu
             </a>
