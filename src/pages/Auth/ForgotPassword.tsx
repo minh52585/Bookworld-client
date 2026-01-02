@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { API_BASE_URL } from "../../configs/api";
 
 const ForgotPasswordFlow: React.FC = () => {
-  const [step, setStep] = useState(1); 
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -13,8 +13,6 @@ const ForgotPasswordFlow: React.FC = () => {
   const [success, setSuccess] = useState("");
 
   // Cấu hình API base URL
-
-
 
   //Gửi OTP về email
   const handleSendOTP = async () => {
@@ -54,8 +52,8 @@ const ForgotPasswordFlow: React.FC = () => {
 
     // Trim và validate OTP
     const cleanOTP = otp.trim();
-    
-    console.log('Sending OTP verification:', { email, otp: cleanOTP });
+
+    console.log("Sending OTP verification:", { email, otp: cleanOTP });
 
     try {
       const response = await fetch(`${API_BASE_URL}/verify-otp`, {
@@ -236,7 +234,9 @@ const ForgotPasswordFlow: React.FC = () => {
                     const value = e.target.value.replace(/\D/g, "");
                     setOtp(value);
                   }}
-                  onKeyPress={(e) => e.key === "Enter" && otp.length === 6 && handleVerifyOTP()}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && otp.length === 6 && handleVerifyOTP()
+                  }
                   maxLength={6}
                   className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center text-2xl tracking-widest font-mono"
                   disabled={loading}
@@ -311,12 +311,14 @@ const ForgotPasswordFlow: React.FC = () => {
                 />
               </div>
 
-              {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-sm text-red-600">
-                  <i className="fas fa-times-circle mr-1"></i>
-                  Mật khẩu xác nhận không khớp
-                </p>
-              )}
+              {newPassword &&
+                confirmPassword &&
+                newPassword !== confirmPassword && (
+                  <p className="text-sm text-red-600">
+                    <i className="fas fa-times-circle mr-1"></i>
+                    Mật khẩu xác nhận không khớp
+                  </p>
+                )}
 
               <button
                 onClick={handleResetPassword}

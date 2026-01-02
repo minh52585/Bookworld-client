@@ -5,7 +5,6 @@ import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "./Auth/LoginModal";
 import { API_BASE_URL } from "../configs/api";
 import { showNotification } from "../utils/notification";
-import { error } from "console";
 
 interface Product {
   _id: string;
@@ -526,8 +525,7 @@ const BookDetailPage: React.FC = () => {
   };
 
   const handleDeleteReview = async () => {
-    if (!userReview || !window.confirm("Bạn có chắc muốn xóa đánh giá này?"))
-      return;
+    if (!userReview) return;
 
     try {
       await axios.delete(`${API_BASE_URL}/reviews/${userReview._id}`, {
@@ -536,22 +534,24 @@ const BookDetailPage: React.FC = () => {
         },
       });
 
-      setReviews(reviews.filter((r) => r._id !== userReview._id));
+      const updatedReviews = reviews.filter((r) => r._id !== userReview._id);
+
+      setReviews(updatedReviews);
       setUserReview(null);
       setShowReviewForm(false);
       setReviewComment("");
       setReviewRating(5);
 
-      // Recalculate average
-      const remainingReviews = reviews.filter((r) => r._id !== userReview._id);
-      if (remainingReviews.length > 0) {
-        const sum = remainingReviews.reduce((acc, r) => acc + r.rating, 0);
-        setAverageRating(sum / remainingReviews.length);
+      if (updatedReviews.length > 0) {
+        const sum = updatedReviews.reduce((acc, r) => acc + r.rating, 0);
+        setAverageRating(sum / updatedReviews.length);
       } else {
         setAverageRating(0);
       }
+
+      showNotification("Đã xóa đánh giá thành công", "success");
     } catch (err: any) {
-      alert(getErrorMessage(err));
+      showNotification("error", getErrorMessage(err));
     }
   };
 
@@ -677,32 +677,8 @@ const BookDetailPage: React.FC = () => {
       {/* Product Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-12 gap-8">
-          {/* Thumbnails */}
-          <div className="col-span-1">
-            <div className="space-y-4">
-              {product.images && product.images.length > 0 ? (
-                product.images.map((img, index) => (
-                  <div
-                    key={index}
-                    className="border border-gray-300 rounded-md p-2 cursor-pointer hover:border-purple-600"
-                  >
-                    <img src={img} alt={`thumb-${index}`} className="w-full" />
-                  </div>
-                ))
-              ) : (
-                <div className="border border-gray-300 rounded-md p-2">
-                  <img
-                    src={getProductImage(product)}
-                    alt="main"
-                    className="w-full"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Main Image */}
-          <div className="col-span-5">
+          <div className="col-span-6">
             <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-lg p-8 relative">
               <img
                 src={getProductImage(product)}
@@ -1167,26 +1143,65 @@ const BookDetailPage: React.FC = () => {
           </p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {relatedProducts.map((item) => (
+            {lastViewed.map((item) => (
               <div
                 key={item._id}
-                className="bg-white border rounded-lg p-4 hover:shadow-lg transition cursor-pointer"
+                className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer"
                 onClick={() => handleProductClick(item._id)}
               >
-                <img
-                  src={getProductImage(item)}
-                  className="h-48 w-full object-cover rounded mb-3"
-                  alt={getProductName(item)}
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src =
-                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                  }}
-                />
-                <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
-                  {getProductName(item)}
-                </h3>
-                <p className="text-sm text-gray-600 mb-2">{item.author}</p>
+                <div className="aspect-[3/4] overflow-hidden bg-gray-100 relative">
+                  <img
+                    src={getProductImage(item)}
+                    alt={getProductName(item)}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src =
+                        'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                    }}
+                  />
+                  {item.category?.name && (
+                    <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+                      {item.category.name}
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="font-medium text-gray-900 mb-1 line-clamp-2 h-12 group-hover:text-blue-600 transition-colors">
+                    {getProductName(item)}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">{item.author}</p>
+
+                  {/* Rating */}
+                  <div className="flex items-center gap-1 mb-3">
+                    {[...Array(5)].map((_, i) => (
+                      <i
+                        key={i}
+                        className={`fa-star text-sm ${
+                          i < Math.floor(item.averageRating || 0)
+                            ? "fas text-yellow-400"
+                            : "far text-gray-300"
+                        }`}
+                      ></i>
+                    ))}
+                    <span className="text-sm text-gray-600 ml-1">
+                      ({item.reviewCount || 0})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold text-red-600">
+                      {item.displayPrice ?? item.minPrice
+                        ? (item.displayPrice ?? item.minPrice)!.toLocaleString(
+                            "vi-VN"
+                          ) + "₫"
+                        : "Liên hệ"}
+                    </span>
+                    <button className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors shadow-sm">
+                      Xem chi tiết
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -1211,45 +1226,61 @@ const BookDetailPage: React.FC = () => {
             {lastViewed.map((item) => (
               <div
                 key={item._id}
-                className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition cursor-pointer"
+                className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer"
                 onClick={() => handleProductClick(item._id)}
               >
-                <img
-                  src={getProductImage(item)}
-                  alt={getProductName(item)}
-                  className="w-full h-64 object-cover"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src =
-                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                  }}
-                />
+                <div className="aspect-[3/4] overflow-hidden bg-gray-100 relative">
+                  <img
+                    src={getProductImage(item)}
+                    alt={getProductName(item)}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src =
+                        'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                    }}
+                  />
+                  {item.category?.name && (
+                    <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+                      {item.category.name}
+                    </div>
+                  )}
+                </div>
                 <div className="p-4">
-                  <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">
+                  <h3 className="font-medium text-gray-900 mb-1 line-clamp-2 h-12 group-hover:text-blue-600 transition-colors">
                     {getProductName(item)}
                   </h3>
-                  <p className="text-sm text-gray-600 mb-2">{item.author}</p>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-lg font-bold text-red-600"></span>
-                    <button
-                      className="text-gray-400 hover:text-purple-600"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <i className="far fa-heart"></i>
+                  <p className="text-sm text-gray-600 mb-3">{item.author}</p>
+
+                  {/* Rating */}
+                  <div className="flex items-center gap-1 mb-3">
+                    {[...Array(5)].map((_, i) => (
+                      <i
+                        key={i}
+                        className={`fa-star text-sm ${
+                          i < Math.floor(item.averageRating || 0)
+                            ? "fas text-yellow-400"
+                            : "far text-gray-300"
+                        }`}
+                      ></i>
+                    ))}
+                    <span className="text-sm text-gray-600 ml-1">
+                      ({item.reviewCount || 0})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold text-red-600">
+                      {item.displayPrice ?? item.minPrice
+                        ? (item.displayPrice ?? item.minPrice)!.toLocaleString(
+                            "vi-VN"
+                          ) + "₫"
+                        : "Liên hệ"}
+                    </span>
+                    <button className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors shadow-sm">
+                      Xem chi tiết
                     </button>
                   </div>
-                  <button
-                    className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      selectDefaultVariantAndRun(item._id, "cart");
-                    }}
-                  >
-                    <i className="fas fa-shopping-cart mr-2"></i>Thêm vào giỏ
-                    hàng
-                  </button>
                 </div>
               </div>
             ))}
