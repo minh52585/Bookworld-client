@@ -721,19 +721,43 @@ function OrderList() {
         onConfirm={async (note) => {
           if (!cancelOrderId) return;
 
-          await axios.put(
-            `${API_BASE_URL}/orders/${cancelOrderId}`,
-            { note },
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          );
+          try {
+            const orderToCancel = orders.find((o) => o._id === cancelOrderId);
 
-          setShowCancelModal(false);
-          setCancelOrderId(null);
-          fetchOrders();
+            const response = await axios.put(
+              `${API_BASE_URL}/orders/${cancelOrderId}`,
+              { note },
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+            );
+
+            const isOnlinePaid =
+              orderToCancel?.payment?.status === "Đã thanh toán" &&
+              (orderToCancel?.payment?.method === "vnpay" ||
+                orderToCancel?.payment?.method === "wallet");
+
+            if (isOnlinePaid) {
+              const refundAmount =
+                orderToCancel?.total?.toLocaleString("vi-VN") || "0";
+              showNotification(
+                `Đã hủy đơn hàng và hoàn ${refundAmount}đ về ví thành công!`,
+                "success"
+              );
+            } else {
+              showNotification("Đã hủy đơn hàng thành công!", "success");
+            }
+
+            setShowCancelModal(false);
+            setCancelOrderId(null);
+            fetchOrders();
+          } catch (error: any) {
+            const errMsg =
+              error.response?.data?.message || "Không thể hủy đơn hàng";
+            showNotification(errMsg, "error");
+          }
         }}
       />
     </div>
