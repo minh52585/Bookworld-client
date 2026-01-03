@@ -498,54 +498,7 @@ function Cart() {
                   Tạm tính
                 </h2>
 
-                {/* Apply coupon */}
-                <div className="mb-4">
-                  <label className="text-sm text-gray-600">Mã giảm giá</label>
-                  <div className="flex gap-2 mt-2">
-                    <input
-                      value={coupon}
-                      onChange={(e) => setCoupon(e.target.value)}
-                      placeholder="Nhập mã giảm giá"
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                    />
-                    <button
-                      onClick={applyCoupon}
-                      disabled={!coupon || applying}
-                      className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${
-                        !coupon || applying
-                          ? 'bg-gray-300 cursor-not-allowed'
-                          : 'bg-purple-600 text-white hover:bg-purple-700'
-                      }`}
-                    >
-                      {applying ? 'Đang kiểm tra...' : 'Áp dụng'}
-                    </button>
-                  </div>
-                  {couponError && (
-                    <p className="text-sm text-red-500 mt-2">{couponError}</p>
-                  )}
-                  {discountAmount > 0 && (
-                    <div className="mt-2">
-                      <div className="inline-flex items-center gap-3 bg-purple-600 text-white px-3 py-1 rounded-full">
-                        <span className="font-semibold tracking-wide">{(coupon || '').toUpperCase()}</span>
-                        <span className="text-sm opacity-90">- {discountAmount.toLocaleString()}đ</span>
-                        <button
-                          onClick={() => {
-                            setCoupon("");
-                            setDiscountAmount(0);
-                            setAppliedItems([]);
-                            setCouponError("");
-                            localStorage.removeItem('pending_discount');
-                          }}
-                          className="ml-2 text-xs bg-white/20 hover:bg-white/30 rounded px-2 py-0.5"
-                        >
-                          Hủy
-                        </button>
-                      </div>
-                      <p className="text-sm text-gray-700 mt-2">Mã đã áp dụng cho các sản phẩm đã chọn.</p>
-                    </div>
-                  )}
-                </div>
-
+                
                 <div className="flex justify-between text-gray-700 mb-4">
                   <span>Tổng sản phẩm đã chọn</span>
                   <span>{(subtotal - discountAmount).toLocaleString()} đ</span>
