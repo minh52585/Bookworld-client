@@ -403,7 +403,10 @@ const BookDetailPage: React.FC = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
+    if (!canReview) {
+      setReviewError("Bạn cần mua sản phẩm này trước khi đánh giá");
+      return;
+    }
     if (reviewImages.length + files.length > 5) {
       setReviewError("Tối đa 5 ảnh");
       return;
@@ -708,40 +711,6 @@ const BookDetailPage: React.FC = () => {
     return (
       <div className="p-10 text-center text-red-500 text-xl">{pageError}</div>
     );
-  const selectDefaultVariantAndRun = async (
-    productId: string,
-    action: "cart" | "favorite"
-  ) => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/products/${productId}`);
-      const productData = res.data.data.product;
-      const variants = res.data.data.variant || [];
-
-      if (!variants.length) {
-        showNotification("Sản phẩm này chưa có biến thể", "error");
-        return;
-      }
-
-      const availableVariant = variants.find((v: any) => v.quantity > 0);
-
-      if (!availableVariant) {
-        showNotification("Sản phẩm này đã hết hàng", "error");
-        return;
-      }
-
-      // gán lại state đang dùng
-      setProduct(productData);
-      setSelectedVariant(availableVariant);
-
-      // đợi React cập nhật state
-      setTimeout(() => {
-        if (action === "cart") handleAddToCart();
-        if (action === "favorite") handleToggleFavorite();
-      }, 0);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   return (
     <div className="bg-gray-50">
@@ -1133,7 +1102,11 @@ const BookDetailPage: React.FC = () => {
                       accept="image/*"
                       onChange={handleImageUpload}
                       className="hidden"
-                      disabled={uploadingImages || reviewImages.length >= 5}
+                      disabled={
+                        uploadingImages ||
+                        reviewImages.length >= 5 ||
+                        !canReview
+                      }
                     />
                   </label>
                 )}
@@ -1213,7 +1186,7 @@ const BookDetailPage: React.FC = () => {
                       {review.comment}
                     </p>
 
-                    {/* ← THÊM PHẦN HIỂN THỊ ẢNH */}
+                    {/* PHẦN HIỂN THỊ ẢNH */}
                     {review.images && review.images.length > 0 && (
                       <div className="flex flex-wrap gap-2 ml-13">
                         {review.images.map((img, idx) => (
