@@ -30,6 +30,17 @@ const UserProfile: React.FC = () => {
     accountName: "",
     isDefault: false,
   });
+  // State cho edit profile
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    avatar: "",
+  });
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
   const limit = 20;
 
   useEffect(() => {
@@ -41,6 +52,37 @@ const UserProfile: React.FC = () => {
       fetchBankCards();
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (isAuthenticated && activeTab === "info") {
+      fetchUserInfo();
+    }
+  }, [isAuthenticated, activeTab]);
+
+  const fetchUserInfo = async () => {
+    setLoadingProfile(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await axios.get(`${API_BASE_URL}/me/infor`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = response.data.data;
+      setProfileForm({
+        name: data.name || "",
+        email: data.email || "",
+        phone: data.phone || "",
+        address: data.address || "",
+        avatar: data.avatar || "",
+      });
+    } catch (error) {
+      console.error("Lỗi lấy thông tin:", error);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   const fetchWalletBalance = async () => {
     setLoadingWallet(true);
@@ -239,6 +281,51 @@ const UserProfile: React.FC = () => {
         error.response?.data?.message || "Không thể rút tiền",
         "error"
       );
+    }
+  };
+  const handleUpdateProfile = async () => {
+    if (!profileForm.name.trim()) {
+      showNotification("Vui lòng nhập họ tên!", "error");
+      return;
+    }
+
+    if (!profileForm.email.trim()) {
+      showNotification("Vui lòng nhập email!", "error");
+      return;
+    }
+
+    setLoadingUpdate(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${API_BASE_URL}/me/infor`,
+        {
+          name: profileForm.name,
+          email: profileForm.email,
+          phone: profileForm.phone,
+          address: profileForm.address,
+          avatar: profileForm.avatar,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      showNotification("Cập nhật thông tin thành công!", "success");
+      setIsEditingProfile(false);
+
+      // Reload user info
+      fetchUserInfo();
+    } catch (error: any) {
+      showNotification(
+        error.response?.data?.message || "Không thể cập nhật thông tin",
+        "error"
+      );
+    } finally {
+      setLoadingUpdate(false);
     }
   };
 
@@ -778,74 +865,172 @@ const UserProfile: React.FC = () => {
             )}
 
             {/* Thông tin cá nhân */}
+            {/* Thông tin cá nhân */}
             {activeTab === "info" && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  Thông tin tài khoản
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-user mr-2 text-purple-600"></i>
-                      Họ và tên
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.fullname || "Chưa cập nhật"}
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-envelope mr-2 text-purple-600"></i>
-                      Email
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.email}
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-phone mr-2 text-purple-600"></i>
-                      Số điện thoại
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.fullphone || "Chưa cập nhật"}
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-shield-alt mr-2 text-purple-600"></i>
-                      Vai trò
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.role === "admin" ? "Quản trị viên" : "Thành viên"}
-                    </p>
-                  </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Thông tin tài khoản
+                  </h2>
+                  {!isEditingProfile ? (
+                    <button
+                      onClick={() => setIsEditingProfile(true)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md"
+                    >
+                      <i className="fas fa-edit mr-2"></i>
+                      Chỉnh sửa thông tin
+                    </button>
+                  ) : (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setIsEditingProfile(false);
+                          fetchUserInfo(); // Reset form
+                        }}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md"
+                      >
+                        <i className="fas fa-times mr-2"></i>
+                        Hủy
+                      </button>
+                      <button
+                        onClick={handleUpdateProfile}
+                        disabled={loadingUpdate}
+                        className={`px-6 py-3 rounded-lg font-semibold transition shadow-md ${
+                          loadingUpdate
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-green-600 hover:bg-green-700 text-white"
+                        }`}
+                      >
+                        {loadingUpdate ? (
+                          <>
+                            <i className="fas fa-spinner fa-spin mr-2"></i>
+                            Đang lưu...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-save mr-2"></i>
+                            Lưu thay đổi
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {user.address && (
-                  <div className="bg-gray-50 p-4 rounded-lg mt-4">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-map-marker-alt mr-2 text-purple-600"></i>
-                      Địa chỉ
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.address.street && `${user.address.street}, `}
-                      {user.address.city && `${user.address.city}, `}
-                      {user.address.province || "Chưa cập nhật"}
-                    </p>
+                {loadingProfile ? (
+                  <div className="text-center py-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto"></div>
+                    <p className="text-gray-600 mt-4">Đang tải thông tin...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Họ và tên */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                        <i className="fas fa-user mr-2 text-purple-600"></i>
+                        Họ và tên <span className="text-red-500">*</span>
+                      </label>
+                      {isEditingProfile ? (
+                        <input
+                          type="text"
+                          value={profileForm.name}
+                          onChange={(e) =>
+                            setProfileForm({
+                              ...profileForm,
+                              name: e.target.value,
+                            })
+                          }
+                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                          placeholder="Nhập họ và tên"
+                        />
+                      ) : (
+                        <p className="text-lg font-medium text-gray-800">
+                          {profileForm.name || user.fullname || "Chưa cập nhật"}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Email */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                        <i className="fas fa-envelope mr-2 text-purple-600"></i>
+                        Email (Tài khoản đăng nhập)
+                      </label>
+                      <p className="text-lg font-medium text-gray-800">
+                        {profileForm.email || user.email}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        <i className="fas fa-lock mr-1"></i>
+                        Email không thể thay đổi vì đây là tài khoản đăng nhập
+                      </p>
+                    </div>
+
+                    {/* Số điện thoại */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                        <i className="fas fa-phone mr-2 text-purple-600"></i>
+                        Số điện thoại
+                      </label>
+                      {isEditingProfile ? (
+                        <input
+                          type="text"
+                          value={profileForm.phone}
+                          onChange={(e) =>
+                            setProfileForm({
+                              ...profileForm,
+                              phone: e.target.value,
+                            })
+                          }
+                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                          placeholder="Nhập số điện thoại"
+                        />
+                      ) : (
+                        <p className="text-lg font-medium text-gray-800">
+                          {profileForm.phone ||
+                            user.fullphone ||
+                            "Chưa cập nhật"}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Vai trò (không cho edit) */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                        <i className="fas fa-shield-alt mr-2 text-purple-600"></i>
+                        Vai trò
+                      </label>
+                      <p className="text-lg font-medium text-gray-800">
+                        {user.role === "admin" ? "Quản trị viên" : "Thành viên"}
+                      </p>
+                    </div>
+
+                    {/* Địa chỉ (full width) */}
+                    <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                        <i className="fas fa-map-marker-alt mr-2 text-purple-600"></i>
+                        Địa chỉ
+                      </label>
+                      {isEditingProfile ? (
+                        <textarea
+                          value={profileForm.address}
+                          onChange={(e) =>
+                            setProfileForm({
+                              ...profileForm,
+                              address: e.target.value,
+                            })
+                          }
+                          rows={3}
+                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                          placeholder="Nhập địa chỉ đầy đủ"
+                        />
+                      ) : (
+                        <p className="text-lg font-medium text-gray-800">
+                          {profileForm.address || "Chưa cập nhật"}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
-
-                <div className="flex justify-end mt-6">
-                  <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">
-                    <i className="fas fa-edit mr-2"></i>
-                    Chỉnh sửa thông tin
-                  </button>
-                </div>
               </div>
             )}
           </div>
