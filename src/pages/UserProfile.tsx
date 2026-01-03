@@ -23,14 +23,13 @@ const UserProfile: React.FC = () => {
   const [page] = useState(1);
   const [bankCards, setBankCards] = useState<any[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<string>(""); // ID thẻ được chọn
+  const [selectedCard, setSelectedCard] = useState<string>("");
   const [cardForm, setCardForm] = useState({
     bankName: "Vietcombank",
     accountNumber: "",
     accountName: "",
     isDefault: false,
   });
-  // State cho edit profile
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: "",
@@ -137,6 +136,7 @@ const UserProfile: React.FC = () => {
       setLoadingTransactions(false);
     }
   };
+
   const fetchBankCards = async () => {
     setLoadingCards(true);
     try {
@@ -147,7 +147,6 @@ const UserProfile: React.FC = () => {
 
       if (response.data?.data) {
         setBankCards(response.data.data);
-        // Set thẻ mặc định làm thẻ được chọn
         const defaultCard = response.data.data.find((c: any) => c.isDefault);
         if (defaultCard) setSelectedCard(defaultCard._id);
       }
@@ -157,6 +156,7 @@ const UserProfile: React.FC = () => {
       setLoadingCards(false);
     }
   };
+
   const handleDeposit = async () => {
     const amount = parseInt(depositAmount);
 
@@ -201,13 +201,11 @@ const UserProfile: React.FC = () => {
       if (response.data.success && response.data.data.paymentUrl) {
         showNotification("Đang chuyển đến trang thanh toán VNPay...", "info");
 
-        // Lưu transaction ID để tracking
         localStorage.setItem(
           "pending_deposit_id",
           response.data.data.balance._id
         );
 
-        // Chuyển hướng đến VNPay
         window.location.href = response.data.data.paymentUrl;
       } else {
         showNotification(
@@ -283,14 +281,10 @@ const UserProfile: React.FC = () => {
       );
     }
   };
+
   const handleUpdateProfile = async () => {
     if (!profileForm.name.trim()) {
       showNotification("Vui lòng nhập họ tên!", "error");
-      return;
-    }
-
-    if (!profileForm.email.trim()) {
-      showNotification("Vui lòng nhập email!", "error");
       return;
     }
 
@@ -301,7 +295,7 @@ const UserProfile: React.FC = () => {
         `${API_BASE_URL}/me/infor`,
         {
           name: profileForm.name,
-          email: profileForm.email,
+          // Không gửi email để tránh thay đổi tài khoản đăng nhập
           phone: profileForm.phone,
           address: profileForm.address,
           avatar: profileForm.avatar,
@@ -317,7 +311,6 @@ const UserProfile: React.FC = () => {
       showNotification("Cập nhật thông tin thành công!", "success");
       setIsEditingProfile(false);
 
-      // Reload user info
       fetchUserInfo();
     } catch (error: any) {
       showNotification(
@@ -360,7 +353,7 @@ const UserProfile: React.FC = () => {
       if (response.data.success) {
         showNotification("Thêm thẻ thành công!", "success");
         setShowAddCardModal(false);
-        fetchBankCards(); // Reload danh sách
+        fetchBankCards();
       }
     } catch (error: any) {
       showNotification(
@@ -369,6 +362,7 @@ const UserProfile: React.FC = () => {
       );
     }
   };
+
   const resetCardForm = () => {
     setCardForm({
       bankName: "Vietcombank",
@@ -377,6 +371,7 @@ const UserProfile: React.FC = () => {
       isDefault: false,
     });
   };
+
   const handleDeleteCard = async (cardId: string) => {
     if (!window.confirm("Bạn có chắc muốn xóa thẻ này?")) return;
 
@@ -419,6 +414,7 @@ const UserProfile: React.FC = () => {
       );
     }
   };
+
   const handleLogout = () => {
     if (window.confirm("Bạn có chắc muốn đăng xuất?")) {
       logout();
@@ -451,6 +447,7 @@ const UserProfile: React.FC = () => {
     };
     return labels[type] || { label: type, icon: "fa-exchange", color: "gray" };
   };
+
   const formatDateTime = (value?: string) => {
     if (!value) return "";
     return new Date(value).toLocaleString("vi-VN", {
@@ -479,7 +476,6 @@ const UserProfile: React.FC = () => {
     );
   };
 
-  // Tính toán thống kê từ transactions thực tế
   const totalDeposit = transactions
     .filter((t) => t.type === "Nạp tiền" && t.status === "Thành công")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -501,11 +497,26 @@ const UserProfile: React.FC = () => {
             <div className="flex items-center space-x-6">
               {/* Avatar */}
               <div className="relative">
-                <div className="w-32 h-32 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+                {profileForm.avatar ? (
+                  <img
+                    src={profileForm.avatar}
+                    alt="Avatar"
+                    className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      e.currentTarget.nextElementSibling.style.display = "flex";
+                    }}
+                  />
+                ) : null}
+                <div
+                  className={`w-32 h-32 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg ${
+                    profileForm.avatar ? "hidden" : ""
+                  }`}
+                >
                   {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                 </div>
                 {user.role === "admin" && (
-                  <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md">
+                  <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-black text-xs px-3 py-1 rounded-full font-bold shadow-md">
                     ADMIN
                   </div>
                 )}
@@ -851,7 +862,6 @@ const UserProfile: React.FC = () => {
                                 {statusInfo.label}
                               </div>
                             </div>
-                            {/* THỜI GIAN */}
                             <div className="text-sm text-gray-500">
                               {formatDateTime(t.createdAt)}
                             </div>
@@ -864,8 +874,7 @@ const UserProfile: React.FC = () => {
               </div>
             )}
 
-            {/* Thông tin cá nhân */}
-            {/* Thông tin cá nhân */}
+            {/* TAB: Thông tin cá nhân */}
             {activeTab === "info" && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
@@ -885,7 +894,7 @@ const UserProfile: React.FC = () => {
                       <button
                         onClick={() => {
                           setIsEditingProfile(false);
-                          fetchUserInfo(); // Reset form
+                          fetchUserInfo();
                         }}
                         className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md"
                       >
@@ -923,111 +932,230 @@ const UserProfile: React.FC = () => {
                     <p className="text-gray-600 mt-4">Đang tải thông tin...</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Họ và tên */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                        <i className="fas fa-user mr-2 text-purple-600"></i>
-                        Họ và tên <span className="text-red-500">*</span>
-                      </label>
-                      {isEditingProfile ? (
-                        <input
-                          type="text"
-                          value={profileForm.name}
-                          onChange={(e) =>
-                            setProfileForm({
-                              ...profileForm,
-                              name: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                          placeholder="Nhập họ và tên"
-                        />
-                      ) : (
+                  <div className="space-y-6">
+                    {/* Avatar Section */}
+                    <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-xl border-2 border-purple-200">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">
+                        <i className="fas fa-image mr-2 text-purple-600"></i>
+                        Ảnh đại diện
+                      </h3>
+                      <div className="flex items-center gap-6 flex-wrap">
+                        {/* Preview Avatar */}
+                        <div className="relative">
+                          {profileForm.avatar ? (
+                            <img
+                              src={profileForm.avatar}
+                              alt="Avatar Preview"
+                              className="w-24 h-24 rounded-full object-cover shadow-lg border-4 border-white"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                e.currentTarget.nextElementSibling.style.display =
+                                  "flex";
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className={`w-24 h-24 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ${
+                              profileForm.avatar ? "hidden" : ""
+                            }`}
+                          >
+                            {profileForm.name
+                              ? profileForm.name.charAt(0).toUpperCase()
+                              : user.name
+                              ? user.name.charAt(0).toUpperCase()
+                              : "U"}
+                          </div>
+                        </div>
+
+                        {/* Upload Options */}
+                        {isEditingProfile && (
+                          <div className="flex-1 space-y-3">
+                            {/* Option 1: Nhập URL */}
+                            <div>
+                              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                                Nhập URL ảnh
+                              </label>
+                              <input
+                                type="text"
+                                value={profileForm.avatar}
+                                onChange={(e) =>
+                                  setProfileForm({
+                                    ...profileForm,
+                                    avatar: e.target.value,
+                                  })
+                                }
+                                placeholder="https://example.com/avatar.jpg"
+                                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm"
+                              />
+                            </div>
+
+                            {/* Option 2: Upload File */}
+                            <div>
+                              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                                Hoặc tải ảnh lên
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    if (file.size > 2 * 1024 * 1024) {
+                                      showNotification(
+                                        "Ảnh không được vượt quá 2MB!",
+                                        "error"
+                                      );
+                                      return;
+                                    }
+
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      setProfileForm({
+                                        ...profileForm,
+                                        avatar: reader.result as string,
+                                      });
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 cursor-pointer"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                JPG, PNG, GIF (tối đa 2MB)
+                              </p>
+                            </div>
+
+                            {/* Remove Avatar Button */}
+                            {profileForm.avatar && (
+                              <button
+                                onClick={() =>
+                                  setProfileForm({
+                                    ...profileForm,
+                                    avatar: "",
+                                  })
+                                }
+                                className="text-sm text-red-600 hover:text-red-700 font-semibold"
+                              >
+                                <i className="fas fa-trash mr-1"></i>
+                                Xóa ảnh đại diện
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Other Info Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Họ và tên */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-user mr-2 text-purple-600"></i>
+                          Họ và tên <span className="text-red-500">*</span>
+                        </label>
+                        {isEditingProfile ? (
+                          <input
+                            type="text"
+                            value={profileForm.name}
+                            onChange={(e) =>
+                              setProfileForm({
+                                ...profileForm,
+                                name: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            placeholder="Nhập họ và tên"
+                          />
+                        ) : (
+                          <p className="text-lg font-medium text-gray-800">
+                            {profileForm.name ||
+                              user.fullname ||
+                              "Chưa cập nhật"}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Email */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-envelope mr-2 text-purple-600"></i>
+                          Email (Tài khoản đăng nhập)
+                        </label>
                         <p className="text-lg font-medium text-gray-800">
-                          {profileForm.name || user.fullname || "Chưa cập nhật"}
+                          {profileForm.email || user.email}
                         </p>
-                      )}
-                    </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          <i className="fas fa-lock mr-1"></i>
+                          Email không thể thay đổi vì đây là tài khoản đăng nhập
+                        </p>
+                      </div>
 
-                    {/* Email */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                        <i className="fas fa-envelope mr-2 text-purple-600"></i>
-                        Email (Tài khoản đăng nhập)
-                      </label>
-                      <p className="text-lg font-medium text-gray-800">
-                        {profileForm.email || user.email}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        <i className="fas fa-lock mr-1"></i>
-                        Email không thể thay đổi vì đây là tài khoản đăng nhập
-                      </p>
-                    </div>
+                      {/* Số điện thoại */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-phone mr-2 text-purple-600"></i>
+                          Số điện thoại
+                        </label>
+                        {isEditingProfile ? (
+                          <input
+                            type="text"
+                            value={profileForm.phone}
+                            onChange={(e) =>
+                              setProfileForm({
+                                ...profileForm,
+                                phone: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            placeholder="Nhập số điện thoại"
+                          />
+                        ) : (
+                          <p className="text-lg font-medium text-gray-800">
+                            {profileForm.phone ||
+                              user.fullphone ||
+                              "Chưa cập nhật"}
+                          </p>
+                        )}
+                      </div>
 
-                    {/* Số điện thoại */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                        <i className="fas fa-phone mr-2 text-purple-600"></i>
-                        Số điện thoại
-                      </label>
-                      {isEditingProfile ? (
-                        <input
-                          type="text"
-                          value={profileForm.phone}
-                          onChange={(e) =>
-                            setProfileForm({
-                              ...profileForm,
-                              phone: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                          placeholder="Nhập số điện thoại"
-                        />
-                      ) : (
+                      {/* Vai trò */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-shield-alt mr-2 text-purple-600"></i>
+                          Vai trò
+                        </label>
                         <p className="text-lg font-medium text-gray-800">
-                          {profileForm.phone ||
-                            user.fullphone ||
-                            "Chưa cập nhật"}
+                          {user.role === "admin"
+                            ? "Quản trị viên"
+                            : "Thành viên"}
                         </p>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Vai trò (không cho edit) */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                        <i className="fas fa-shield-alt mr-2 text-purple-600"></i>
-                        Vai trò
-                      </label>
-                      <p className="text-lg font-medium text-gray-800">
-                        {user.role === "admin" ? "Quản trị viên" : "Thành viên"}
-                      </p>
-                    </div>
-
-                    {/* Địa chỉ (full width) */}
-                    <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                        <i className="fas fa-map-marker-alt mr-2 text-purple-600"></i>
-                        Địa chỉ
-                      </label>
-                      {isEditingProfile ? (
-                        <textarea
-                          value={profileForm.address}
-                          onChange={(e) =>
-                            setProfileForm({
-                              ...profileForm,
-                              address: e.target.value,
-                            })
-                          }
-                          rows={3}
-                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                          placeholder="Nhập địa chỉ đầy đủ"
-                        />
-                      ) : (
-                        <p className="text-lg font-medium text-gray-800">
-                          {profileForm.address || "Chưa cập nhật"}
-                        </p>
-                      )}
+                      {/* Địa chỉ */}
+                      <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-map-marker-alt mr-2 text-purple-600"></i>
+                          Địa chỉ
+                        </label>
+                        {isEditingProfile ? (
+                          <textarea
+                            value={profileForm.address}
+                            onChange={(e) =>
+                              setProfileForm({
+                                ...profileForm,
+                                address: e.target.value,
+                              })
+                            }
+                            rows={3}
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            placeholder="Nhập địa chỉ đầy đủ"
+                          />
+                        ) : (
+                          <p className="text-lg font-medium text-gray-800">
+                            {profileForm.address || "Chưa cập nhật"}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1040,23 +1168,6 @@ const UserProfile: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
           <Link
             to="/cart"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition group"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                  Giỏ hàng
-                </h3>
-                <p className="text-gray-600 text-sm">Xem giỏ hàng của bạn</p>
-              </div>
-              <div className="text-3xl text-purple-600 group-hover:scale-110 transition">
-                <i className="fas fa-shopping-cart"></i>
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            to="/"
             className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition group"
           >
             <div className="flex items-center justify-between">
@@ -1272,7 +1383,6 @@ const UserProfile: React.FC = () => {
       )}
 
       {/* MODAL: Thêm thẻ */}
-
       {showAddCardModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -1293,7 +1403,6 @@ const UserProfile: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {/* Ngân hàng */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Ngân hàng <span className="text-red-500">*</span>
@@ -1318,7 +1427,6 @@ const UserProfile: React.FC = () => {
                 </select>
               </div>
 
-              {/* Số tài khoản */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Số tài khoản <span className="text-red-500">*</span>
@@ -1327,7 +1435,6 @@ const UserProfile: React.FC = () => {
                   type="text"
                   value={cardForm.accountNumber}
                   onChange={(e) => {
-                    // Chỉ cho phép nhập số
                     const value = e.target.value.replace(/\D/g, "");
                     setCardForm({ ...cardForm, accountNumber: value });
                   }}
@@ -1339,7 +1446,6 @@ const UserProfile: React.FC = () => {
                 </p>
               </div>
 
-              {/* Tên chủ tài khoản */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Tên chủ tài khoản <span className="text-red-500">*</span>
@@ -1361,7 +1467,6 @@ const UserProfile: React.FC = () => {
                 </p>
               </div>
 
-              {/* Checkbox mặc định */}
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1377,10 +1482,8 @@ const UserProfile: React.FC = () => {
               </label>
             </div>
 
-            {/* Button thêm thẻ */}
             <button
               onClick={() => {
-                // Validation
                 if (!cardForm.bankName) {
                   showNotification("Vui lòng chọn ngân hàng!", "error");
                   return;
@@ -1416,6 +1519,7 @@ const UserProfile: React.FC = () => {
           </div>
         </div>
       )}
+
       {/* Font Awesome CDN */}
       <link
         rel="stylesheet"
