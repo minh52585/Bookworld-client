@@ -633,37 +633,6 @@ const BookDetailPage: React.FC = () => {
     }
   };
 
-  const handleDeleteReview = async () => {
-    if (!userReview) return;
-
-    try {
-      await axios.delete(`${API_BASE_URL}/reviews/${userReview._id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      const updatedReviews = reviews.filter((r) => r._id !== userReview._id);
-
-      setReviews(updatedReviews);
-      setUserReview(null);
-      setShowReviewForm(false);
-      setReviewComment("");
-      setReviewRating(5);
-
-      if (updatedReviews.length > 0) {
-        const sum = updatedReviews.reduce((acc, r) => acc + r.rating, 0);
-        setAverageRating(sum / updatedReviews.length);
-      } else {
-        setAverageRating(0);
-      }
-
-      showNotification("Đã xóa đánh giá thành công", "success");
-    } catch (err: any) {
-      showNotification("error", getErrorMessage(err));
-    }
-  };
-
   const renderStars = (
     rating: number,
     interactive: boolean = false,
@@ -1006,31 +975,19 @@ const BookDetailPage: React.FC = () => {
             </>
           )}
 
-          {/* ← THÊM ĐOẠN NÀY - Hiển thị nút Edit/Delete nếu user đã review */}
           {isAuthenticated && userReview && !showReviewForm && (
-            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-              <p className="text-sm text-purple-700 mb-2">
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-green-700 mb-3">
                 Bạn đã đánh giá sản phẩm này
               </p>
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleEditReview}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition text-sm"
-                >
-                  <i className="fas fa-edit mr-2"></i>
-                  Chỉnh sửa
-                </button>
-                <button
-                  onClick={handleDeleteReview}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm"
-                >
-                  <i className="fas fa-trash mr-2"></i>
-                  Xóa
-                </button>
-              </div>
+              <button
+                onClick={handleEditReview}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
+              >
+                Chỉnh sửa
+              </button>
             </div>
           )}
-
           {showReviewForm && (
             <form
               onSubmit={handleSubmitReview}
