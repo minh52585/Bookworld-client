@@ -31,7 +31,12 @@ const UserProfile: React.FC = () => {
     isDefault: false,
   });
   const limit = 20;
-
+  const TRANSACTION_SIGN: Record<string, "+" | "-"> = {
+  "Nạp tiền": "+",
+  "Hoàn tiền": "+",
+  "Thanh toán": "-",
+  "Rút tiền": "-",
+};
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
@@ -41,6 +46,15 @@ const UserProfile: React.FC = () => {
       fetchBankCards();
     }
   }, [isAuthenticated, navigate]);
+
+  const formatOrderIdShort = (text?: string) => {
+  if (!text) return "";
+
+  return text.replace(
+    /\b[a-f0-9]{24}\b/gi,
+    (id) => `#${id.slice(-8)}`
+  );
+};
 
   const fetchWalletBalance = async () => {
     setLoadingWallet(true);
@@ -730,50 +744,84 @@ const UserProfile: React.FC = () => {
                 </div>
 
                 {loadingTransactions ? (
-                  <div className="text-center py-10">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4"></div>
-                    <p className="text-gray-600">Đang tải giao dịch...</p>
-                  </div>
-                ) : transactions.length === 0 ? (
-                  <div className="text-center py-10">
-                    <i className="fas fa-receipt text-6xl text-gray-300 mb-4"></i>
-                    <p className="text-gray-600">Chưa có giao dịch nào</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {transactions.map((t) => {
-                      const typeInfo = getTransactionTypeLabel(t.type);
-                      const statusInfo = getStatusLabel(t.status);
+                    <div className="text-center py-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4"></div>
+                      <p className="text-gray-600">Đang tải giao dịch...</p>
+                    </div>
+                  ) : transactions.length === 0 ? (
+                    <div className="text-center py-10">
+                      <i className="fas fa-receipt text-6xl text-gray-300 mb-4"></i>
+                      <p className="text-gray-600">Chưa có giao dịch nào</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {transactions.map((t) => {
+                        const typeInfo = getTransactionTypeLabel(t.type);
+                        const statusInfo = getStatusLabel(t.status);
 
-                      return (
-                        <div
-                          key={t._id}
-                          className="bg-gray-50 hover:bg-gray-100 p-5 rounded-xl transition border border-gray-200"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div
-                                className={`text-lg font-bold text-${typeInfo.color}-600`}
-                              >
-                                {t.type === "Nạp tiền" ? "+" : "-"}
-                                {formatCurrency(t.amount)}
+                        // ✅ Xác định + / -
+                        const TRANSACTION_SIGN: Record<string, "+" | "-"> = {
+                          "Nạp tiền": "+",
+                          "Hoàn tiền": "+",
+                          "Thanh toán": "-",
+                          "Rút tiền": "-",
+                        };
+
+                        // ✅ Màu Tailwind an toàn
+                        const COLOR_CLASS: Record<string, string> = {
+                          green: "text-green-600",
+                          red: "text-red-600",
+                          blue: "text-blue-600",
+                          orange: "text-orange-600",
+                        };
+
+                        return (
+                          <div
+                            key={t._id}
+                            className="bg-gray-50 hover:bg-gray-100 p-5 rounded-xl transition border border-gray-200"
+                          >
+                            {/* HÀNG TRÊN */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                {/* SỐ TIỀN */}
+                                <div
+                                  className={`text-lg font-bold ${
+                                    COLOR_CLASS[typeInfo.color] || "text-gray-600"
+                                  }`}
+                                >
+                                  {TRANSACTION_SIGN[t.type] || "-"}
+                                  {formatCurrency(t.amount)}
+                                </div>
+
+                                {/* TRẠNG THÁI */}
+                                <div
+                                  className={`text-xs px-2 py-1 rounded-full inline-block ${statusInfo.class}`}
+                                >
+                                  {statusInfo.label}
+                                </div>
                               </div>
-                              <div
-                                className={`text-xs px-2 py-1 rounded-full inline-block ${statusInfo.class}`}
-                              >
-                                {statusInfo.label}
+
+                              {/* THỜI GIAN */}
+                              <div className="text-sm text-gray-500">
+                                {formatDateTime(t.createdAt)}
                               </div>
                             </div>
-                            {/* THỜI GIAN */}
-                            <div className="text-sm text-gray-500">
-                              {formatDateTime(t.createdAt)}
+
+                            {/* HÀNG DƯỚI */}
+                            <div className="mt-2 text-sm text-gray-700">
+                              <span className="font-medium">{t.type}</span>
+                              {t.description && (
+                                <>
+                                  <span className="mx-2 text-gray-400">•</span>
+                                  <span className="text-gray-600">{formatOrderIdShort(t.description)}</span>
+                                </>
+                              )}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  )}
               </div>
             )}
 
