@@ -724,11 +724,10 @@ function OrderList() {
         open={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         onConfirm={async (note) => {
-
           try {
             const orderToCancel = orders.find((o) => o._id === cancelOrderId);
 
-            const response = await axios.put(
+            await axios.put(
               `${API_BASE_URL}/orders/${cancelOrderId}`,
               { note },
               {

@@ -591,7 +591,6 @@ function Cart() {
                     </div>
                   )}
                 </div>
-
                 <div className="flex justify-between text-gray-700 mb-4">
                   <span>Tổng sản phẩm đã chọn</span>
                   <span>{(subtotal - discountAmount).toLocaleString()} đ</span>
