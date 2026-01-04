@@ -735,6 +735,7 @@ function OrderList() {
               }
             );
 
+<<<<<<< HEAD
             fetchOrders();
           } catch (err: any) {
           setErrorMessage(
@@ -743,6 +744,46 @@ function OrderList() {
         }
           }
         }
+=======
+          try {
+            const orderToCancel = orders.find((o) => o._id === cancelOrderId);
+
+            const response = await axios.put(
+              `${API_BASE_URL}/orders/${cancelOrderId}`,
+              { note },
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+            );
+
+            const isOnlinePaid =
+              orderToCancel?.payment?.status === "Đã thanh toán" &&
+              (orderToCancel?.payment?.method === "vnpay" ||
+                orderToCancel?.payment?.method === "wallet");
+
+            if (isOnlinePaid) {
+              const refundAmount =
+                orderToCancel?.total?.toLocaleString("vi-VN") || "0";
+              showNotification(
+                `Đã hủy đơn hàng và hoàn ${refundAmount}đ về ví thành công!`,
+                "success"
+              );
+            } else {
+              showNotification("Đã hủy đơn hàng thành công!", "success");
+            }
+
+            setShowCancelModal(false);
+            setCancelOrderId(null);
+            fetchOrders();
+          } catch (error: any) {
+            const errMsg =
+              error.response?.data?.message || "Không thể hủy đơn hàng";
+            showNotification(errMsg, "error");
+          }
+        }}
+>>>>>>> 29c9d9d1765230f52eb3615dfd4ea13934840288
       />
     </div>
   );

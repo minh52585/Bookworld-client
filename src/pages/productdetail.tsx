@@ -5,6 +5,8 @@ import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "./Auth/LoginModal";
 import { API_BASE_URL } from "../configs/api";
 import { showNotification } from "../utils/notification";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef } from "react";
 
 interface Product {
   _id: string;
@@ -19,6 +21,14 @@ interface Product {
   size: string;
   weight: number;
   quantity?: number;
+  category?: {
+    _id?: string;
+    name?: string;
+  };
+  averageRating?: number;
+  reviewCount?: number;
+  displayPrice?: number;
+  minPrice?: number;
 }
 
 interface Category {
@@ -77,6 +87,14 @@ const BookDetailPage: React.FC = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [canReview, setCanReview] = useState(false);
   const [checkingPurchase, setCheckingPurchase] = useState(true);
+
+  const [canScrollLeftRelated, setCanScrollLeftRelated] = useState(false);
+  const [canScrollRightRelated, setCanScrollRightRelated] = useState(true);
+  const [canScrollLeftViewed, setCanScrollLeftViewed] = useState(false);
+  const [canScrollRightViewed, setCanScrollRightViewed] = useState(true);
+
+  const relatedScrollRef = useRef<HTMLDivElement>(null);
+  const viewedScrollRef = useRef<HTMLDivElement>(null);
 
   const { isAuthenticated, user } = useAuth();
 
@@ -195,6 +213,7 @@ const BookDetailPage: React.FC = () => {
     const getRelated = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/products/${id}/related`);
+
         let products: Product[] = [];
         const data = res.data;
         if (Array.isArray(data)) products = data;
@@ -203,8 +222,32 @@ const BookDetailPage: React.FC = () => {
           products = data.data.items;
         else if (data.relatedProducts && Array.isArray(data.relatedProducts))
           products = data.relatedProducts;
-        setRelatedProducts(products.slice(0, 8));
-      } catch {
+
+        // Fetch category info cho từng product
+        const productsWithCategory = await Promise.all(
+          products.map(async (product) => {
+            // Nếu category là string ID, fetch detail
+            if (product.category && typeof product.category === "string") {
+              try {
+                const catRes = await axios.get(
+                  `${API_BASE_URL}/categories/${product.category}`
+                );
+                return {
+                  ...product,
+                  category: catRes.data.data || catRes.data,
+                };
+              } catch {
+                return product;
+              }
+            }
+            return product;
+          })
+        );
+
+        const filtered = productsWithCategory.filter((p) => p._id !== id);
+        setRelatedProducts(filtered.slice(0, 8));
+      } catch (err) {
+        console.error("Error fetching related:", err);
         setRelatedProducts([]);
       } finally {
         setLoadingRelated(false);
@@ -293,11 +336,77 @@ const BookDetailPage: React.FC = () => {
     checkPurchaseStatus();
   }, [id, isAuthenticated]);
 
+  useEffect(() => {
+    checkScrollabilityRelated();
+    const container = relatedScrollRef.current;
+    if (container) {
+      container.addEventListener("scroll", checkScrollabilityRelated);
+      return () =>
+        container.removeEventListener("scroll", checkScrollabilityRelated);
+    }
+  }, [relatedProducts]);
+
+  useEffect(() => {
+    checkScrollabilityViewed();
+    const container = viewedScrollRef.current;
+    if (container) {
+      container.addEventListener("scroll", checkScrollabilityViewed);
+      return () =>
+        container.removeEventListener("scroll", checkScrollabilityViewed);
+    }
+  }, [lastViewed]);
+
+  const checkScrollabilityRelated = () => {
+    if (relatedScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = relatedScrollRef.current;
+      setCanScrollLeftRelated(scrollLeft > 0);
+      setCanScrollRightRelated(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  const checkScrollabilityViewed = () => {
+    if (viewedScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = viewedScrollRef.current;
+      setCanScrollLeftViewed(scrollLeft > 0);
+      setCanScrollRightViewed(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  const scrollRelated = (direction: "left" | "right") => {
+    if (relatedScrollRef.current) {
+      const scrollAmount = 280;
+      const newScrollLeft =
+        relatedScrollRef.current.scrollLeft +
+        (direction === "left" ? -scrollAmount : scrollAmount);
+
+      relatedScrollRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const scrollViewed = (direction: "left" | "right") => {
+    if (viewedScrollRef.current) {
+      const scrollAmount = 280;
+      const newScrollLeft =
+        viewedScrollRef.current.scrollLeft +
+        (direction === "left" ? -scrollAmount : scrollAmount);
+
+      viewedScrollRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: "smooth",
+      });
+    }
+  };
   // Handle image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
+    if (!canReview) {
+      setReviewError("Bạn cần mua sản phẩm này trước khi đánh giá");
+      return;
+    }
     if (reviewImages.length + files.length > 5) {
       setReviewError("Tối đa 5 ảnh");
       return;
@@ -524,37 +633,6 @@ const BookDetailPage: React.FC = () => {
     }
   };
 
-  const handleDeleteReview = async () => {
-    if (!userReview) return;
-
-    try {
-      await axios.delete(`${API_BASE_URL}/reviews/${userReview._id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      const updatedReviews = reviews.filter((r) => r._id !== userReview._id);
-
-      setReviews(updatedReviews);
-      setUserReview(null);
-      setShowReviewForm(false);
-      setReviewComment("");
-      setReviewRating(5);
-
-      if (updatedReviews.length > 0) {
-        const sum = updatedReviews.reduce((acc, r) => acc + r.rating, 0);
-        setAverageRating(sum / updatedReviews.length);
-      } else {
-        setAverageRating(0);
-      }
-
-      showNotification("Đã xóa đánh giá thành công", "success");
-    } catch (err: any) {
-      showNotification("error", getErrorMessage(err));
-    }
-  };
-
   const renderStars = (
     rating: number,
     interactive: boolean = false,
@@ -602,40 +680,6 @@ const BookDetailPage: React.FC = () => {
     return (
       <div className="p-10 text-center text-red-500 text-xl">{pageError}</div>
     );
-  const selectDefaultVariantAndRun = async (
-    productId: string,
-    action: "cart" | "favorite"
-  ) => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/products/${productId}`);
-      const productData = res.data.data.product;
-      const variants = res.data.data.variant || [];
-
-      if (!variants.length) {
-        showNotification("Sản phẩm này chưa có biến thể", "error");
-        return;
-      }
-
-      const availableVariant = variants.find((v: any) => v.quantity > 0);
-
-      if (!availableVariant) {
-        showNotification("Sản phẩm này đã hết hàng", "error");
-        return;
-      }
-
-      // gán lại state đang dùng
-      setProduct(productData);
-      setSelectedVariant(availableVariant);
-
-      // đợi React cập nhật state
-      setTimeout(() => {
-        if (action === "cart") handleAddToCart();
-        if (action === "favorite") handleToggleFavorite();
-      }, 0);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   return (
     <div className="bg-gray-50">
@@ -931,31 +975,19 @@ const BookDetailPage: React.FC = () => {
             </>
           )}
 
-          {/* ← THÊM ĐOẠN NÀY - Hiển thị nút Edit/Delete nếu user đã review */}
           {isAuthenticated && userReview && !showReviewForm && (
-            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-              <p className="text-sm text-purple-700 mb-2">
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-green-700 mb-3">
                 Bạn đã đánh giá sản phẩm này
               </p>
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleEditReview}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition text-sm"
-                >
-                  <i className="fas fa-edit mr-2"></i>
-                  Chỉnh sửa
-                </button>
-                <button
-                  onClick={handleDeleteReview}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm"
-                >
-                  <i className="fas fa-trash mr-2"></i>
-                  Xóa
-                </button>
-              </div>
+              <button
+                onClick={handleEditReview}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
+              >
+                Chỉnh sửa
+              </button>
             </div>
           )}
-
           {showReviewForm && (
             <form
               onSubmit={handleSubmitReview}
@@ -1027,7 +1059,11 @@ const BookDetailPage: React.FC = () => {
                       accept="image/*"
                       onChange={handleImageUpload}
                       className="hidden"
-                      disabled={uploadingImages || reviewImages.length >= 5}
+                      disabled={
+                        uploadingImages ||
+                        reviewImages.length >= 5 ||
+                        !canReview
+                      }
                     />
                   </label>
                 )}
@@ -1107,7 +1143,7 @@ const BookDetailPage: React.FC = () => {
                       {review.comment}
                     </p>
 
-                    {/* ← THÊM PHẦN HIỂN THỊ ẢNH */}
+                    {/* PHẦN HIỂN THỊ ẢNH */}
                     {review.images && review.images.length > 0 && (
                       <div className="flex flex-wrap gap-2 ml-13">
                         {review.images.map((img, idx) => (
@@ -1142,68 +1178,93 @@ const BookDetailPage: React.FC = () => {
             Không có sản phẩm liên quan
           </p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {lastViewed.map((item) => (
-              <div
-                key={item._id}
-                className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer"
-                onClick={() => handleProductClick(item._id)}
+          <div className="relative group">
+            {/* Left Arrow */}
+            {canScrollLeftRelated && (
+              <button
+                onClick={() => scrollRelated("left")}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-3 transition-all duration-300 opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0"
               >
-                <div className="aspect-[3/4] overflow-hidden bg-gray-100 relative">
-                  <img
-                    src={getProductImage(item)}
-                    alt={getProductName(item)}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src =
-                        'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
-                  {item.category?.name && (
-                    <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
-                      {item.category.name}
+                <ChevronLeft className="w-6 h-6 text-gray-800" />
+              </button>
+            )}
+
+            {/* Scrollable Container */}
+            <div
+              ref={relatedScrollRef}
+              className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {relatedProducts.map((item) => (
+                <div
+                  key={item._id}
+                  className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer flex-shrink-0 w-64"
+                  onClick={() => handleProductClick(item._id)}
+                >
+                  <div className="aspect-[3/4] overflow-hidden bg-gray-100 relative">
+                    <img
+                      src={getProductImage(item)}
+                      alt={getProductName(item)}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src =
+                          'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                    {item.category?.name && (
+                      <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+                        {item.category.name}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-medium text-gray-900 mb-1 line-clamp-2 h-12 group-hover:text-blue-600 transition-colors">
+                      {getProductName(item)}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">{item.author}</p>
+
+                    <div className="flex items-center gap-1 mb-3">
+                      {[...Array(5)].map((_, i) => (
+                        <i
+                          key={i}
+                          className={`fa-star text-sm ${
+                            i < Math.floor(item.averageRating || 0)
+                              ? "fas text-yellow-400"
+                              : "far text-gray-300"
+                          }`}
+                        ></i>
+                      ))}
+                      <span className="text-sm text-gray-600 ml-1">
+                        ({item.reviewCount || 0})
+                      </span>
                     </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-medium text-gray-900 mb-1 line-clamp-2 h-12 group-hover:text-blue-600 transition-colors">
-                    {getProductName(item)}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3">{item.author}</p>
 
-                  {/* Rating */}
-                  <div className="flex items-center gap-1 mb-3">
-                    {[...Array(5)].map((_, i) => (
-                      <i
-                        key={i}
-                        className={`fa-star text-sm ${
-                          i < Math.floor(item.averageRating || 0)
-                            ? "fas text-yellow-400"
-                            : "far text-gray-300"
-                        }`}
-                      ></i>
-                    ))}
-                    <span className="text-sm text-gray-600 ml-1">
-                      ({item.reviewCount || 0})
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-red-600">
-                      {item.displayPrice ?? item.minPrice
-                        ? (item.displayPrice ?? item.minPrice)!.toLocaleString(
-                            "vi-VN"
-                          ) + "₫"
-                        : "Liên hệ"}
-                    </span>
-                    <button className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors shadow-sm">
-                      Xem chi tiết
-                    </button>
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-red-600">
+                        {item.displayPrice ?? item.minPrice
+                          ? (item.displayPrice ??
+                              item.minPrice)!.toLocaleString("vi-VN") + "₫"
+                          : "Liên hệ"}
+                      </span>
+                      <button className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors shadow-sm">
+                        Xem chi tiết
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Right Arrow */}
+            {canScrollRightRelated && (
+              <button
+                onClick={() => scrollRelated("right")}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-3 transition-all duration-300 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
+              >
+                <ChevronRight className="w-6 h-6 text-gray-800" />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1222,68 +1283,93 @@ const BookDetailPage: React.FC = () => {
             Chưa có sản phẩm nào được xem gần đây
           </p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {lastViewed.map((item) => (
-              <div
-                key={item._id}
-                className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer"
-                onClick={() => handleProductClick(item._id)}
+          <div className="relative group">
+            {/* Left Arrow */}
+            {canScrollLeftViewed && (
+              <button
+                onClick={() => scrollViewed("left")}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-3 transition-all duration-300 opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0"
               >
-                <div className="aspect-[3/4] overflow-hidden bg-gray-100 relative">
-                  <img
-                    src={getProductImage(item)}
-                    alt={getProductName(item)}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src =
-                        'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
-                  {item.category?.name && (
-                    <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
-                      {item.category.name}
+                <ChevronLeft className="w-6 h-6 text-gray-800" />
+              </button>
+            )}
+
+            {/* Scrollable Container */}
+            <div
+              ref={viewedScrollRef}
+              className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {lastViewed.map((item) => (
+                <div
+                  key={item._id}
+                  className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer flex-shrink-0 w-64"
+                  onClick={() => handleProductClick(item._id)}
+                >
+                  <div className="aspect-[3/4] overflow-hidden bg-gray-100 relative">
+                    <img
+                      src={getProductImage(item)}
+                      alt={getProductName(item)}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src =
+                          'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300"%3E%3Crect width="200" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="16" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                    {item.category?.name && (
+                      <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+                        {item.category.name}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-medium text-gray-900 mb-1 line-clamp-2 h-12 group-hover:text-blue-600 transition-colors">
+                      {getProductName(item)}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">{item.author}</p>
+
+                    <div className="flex items-center gap-1 mb-3">
+                      {[...Array(5)].map((_, i) => (
+                        <i
+                          key={i}
+                          className={`fa-star text-sm ${
+                            i < Math.floor(item.averageRating || 0)
+                              ? "fas text-yellow-400"
+                              : "far text-gray-300"
+                          }`}
+                        ></i>
+                      ))}
+                      <span className="text-sm text-gray-600 ml-1">
+                        ({item.reviewCount || 0})
+                      </span>
                     </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-medium text-gray-900 mb-1 line-clamp-2 h-12 group-hover:text-blue-600 transition-colors">
-                    {getProductName(item)}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3">{item.author}</p>
 
-                  {/* Rating */}
-                  <div className="flex items-center gap-1 mb-3">
-                    {[...Array(5)].map((_, i) => (
-                      <i
-                        key={i}
-                        className={`fa-star text-sm ${
-                          i < Math.floor(item.averageRating || 0)
-                            ? "fas text-yellow-400"
-                            : "far text-gray-300"
-                        }`}
-                      ></i>
-                    ))}
-                    <span className="text-sm text-gray-600 ml-1">
-                      ({item.reviewCount || 0})
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-red-600">
-                      {item.displayPrice ?? item.minPrice
-                        ? (item.displayPrice ?? item.minPrice)!.toLocaleString(
-                            "vi-VN"
-                          ) + "₫"
-                        : "Liên hệ"}
-                    </span>
-                    <button className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors shadow-sm">
-                      Xem chi tiết
-                    </button>
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-red-600">
+                        {item.displayPrice ?? item.minPrice
+                          ? (item.displayPrice ??
+                              item.minPrice)!.toLocaleString("vi-VN") + "₫"
+                          : "Liên hệ"}
+                      </span>
+                      <button className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors shadow-sm">
+                        Xem chi tiết
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Right Arrow */}
+            {canScrollRightViewed && (
+              <button
+                onClick={() => scrollViewed("right")}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-3 transition-all duration-300 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
+              >
+                <ChevronRight className="w-6 h-6 text-gray-800" />
+              </button>
+            )}
           </div>
         )}
       </div>
