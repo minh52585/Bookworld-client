@@ -286,7 +286,7 @@ function Thanhtoan() {
         },
         payment: {
           method: paymentMethod,
-          status: "Chưa thanh toán",
+          status: "COD",
         },
         items: cartItems
           .filter((item) => item.product_id)

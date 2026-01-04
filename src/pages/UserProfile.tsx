@@ -1551,7 +1551,7 @@ const UserProfile: React.FC = () => {
                 <option value="">-- Chọn thẻ nhận tiền --</option>
                 {bankCards.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.bankName} - {maskCardNumber(c.accountNumber)}
+                    {c.bankName} - {maskCardNumber(c.accountNumber)} - {c.accountName}
                   </option>
                 ))}
               </select>

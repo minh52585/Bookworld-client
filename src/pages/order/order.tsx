@@ -227,11 +227,20 @@ function OrderList() {
           Thanh toán thất bại
         </span>
       );
-    } else {
+    } 
+    else if (paymentStatus === "Chưa thanh toán") {
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-semibold text-sm border border-gray-300">
           <Clock className="w-4 h-4" />
           Chưa thanh toán
+        </span>
+      );
+    }
+    else {
+      return (
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-semibold text-sm border border-gray-300">
+          <Clock className="w-4 h-4" />
+          COD
         </span>
       );
     }
@@ -402,6 +411,22 @@ function OrderList() {
                               Trả / Hoàn
                             </button>
                           )}
+                          {order.payment?.status === "Chưa thanh toán" &&
+                            order.payment?.payment_url && (
+                              <button
+                                className="inline-flex items-center gap-1.5 h-8 px-3
+                                text-xs font-medium text-white
+                                bg-green-600 hover:bg-green-700
+                                rounded-md transition whitespace-nowrap"
+                                onClick={() => {
+                                  window.location.href = order.payment.payment_url;
+                                }}
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                Thanh toán
+                              </button>
+                          )}
+
                       </div>
                     </td>
                   </tr>
