@@ -42,11 +42,11 @@ const UserProfile: React.FC = () => {
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const limit = 20;
   const TRANSACTION_SIGN: Record<string, "+" | "-"> = {
-  "Nạp tiền": "+",
-  "Hoàn tiền": "+",
-  "Thanh toán": "-",
-  "Rút tiền": "-",
-};
+    "Nạp tiền": "+",
+    "Hoàn tiền": "+",
+    "Thanh toán": "-",
+    "Rút tiền": "-",
+  };
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
@@ -57,16 +57,6 @@ const UserProfile: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-<<<<<<< HEAD
-  const formatOrderIdShort = (text?: string) => {
-  if (!text) return "";
-
-  return text.replace(
-    /\b[a-f0-9]{24}\b/gi,
-    (id) => `#${id.slice(-8)}`
-  );
-};
-=======
   useEffect(() => {
     if (isAuthenticated && activeTab === "info") {
       fetchUserInfo();
@@ -97,7 +87,6 @@ const UserProfile: React.FC = () => {
       setLoadingProfile(false);
     }
   };
->>>>>>> 29c9d9d1765230f52eb3615dfd4ea13934840288
 
   const fetchWalletBalance = async () => {
     setLoadingWallet(true);
@@ -843,90 +832,269 @@ const UserProfile: React.FC = () => {
                   </button>
                 </div>
 
+                {/* Thống kê tổng quan */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border-2 border-green-200">
+                    <div className="text-green-700 font-semibold mb-1 text-sm">
+                      <i className="fas fa-arrow-down mr-2"></i>
+                      Tổng nạp
+                    </div>
+                    <div className="text-xl font-bold text-green-800">
+                      {formatCurrency(totalDeposit)}
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl border-2 border-blue-200">
+                    <div className="text-blue-700 font-semibold mb-1 text-sm">
+                      <i className="fas fa-arrow-up mr-2"></i>
+                      Tổng rút
+                    </div>
+                    <div className="text-xl font-bold text-blue-800">
+                      {formatCurrency(totalWithdraw)}
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-xl border-2 border-purple-200">
+                    <div className="text-purple-700 font-semibold mb-1 text-sm">
+                      <i className="fas fa-shopping-bag mr-2"></i>
+                      Tổng chi tiêu
+                    </div>
+                    <div className="text-xl font-bold text-red-700">
+                      {formatCurrency(totalPurchase)}
+                    </div>
+                  </div>
+                </div>
+
                 {loadingTransactions ? (
-                    <div className="text-center py-10">
-                      <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4"></div>
-                      <p className="text-gray-600">Đang tải giao dịch...</p>
+                  <div className="text-center py-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-gray-600">Đang tải giao dịch...</p>
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="text-center py-10">
+                    <i className="fas fa-receipt text-6xl text-gray-300 mb-4"></i>
+                    <p className="text-gray-600">Chưa có giao dịch nào</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
+                    {/* Desktop View - Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">
+                              <i className="far fa-clock mr-2"></i>
+                              Thời gian
+                            </th>
+                            <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">
+                              <i className="fas fa-exchange-alt mr-2"></i>
+                              Loại giao dịch
+                            </th>
+                            <th className="px-6 py-4 text-right text-sm font-bold uppercase tracking-wider">
+                              <i className="fas fa-money-bill-wave mr-2"></i>
+                              Số tiền
+                            </th>
+                            <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                              <i className="fas fa-info-circle mr-2"></i>
+                              Trạng thái
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {transactions.map((t, index) => {
+                            const typeInfo = getTransactionTypeLabel(t.type);
+                            const statusInfo = getStatusLabel(t.status);
+
+                            return (
+                              <tr
+                                key={t._id}
+                                className={`hover:bg-gray-50 transition ${
+                                  index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }`}
+                              >
+                                {/* Thời gian */}
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {
+                                        formatDateTime(t.createdAt).split(
+                                          ", "
+                                        )[0]
+                                      }
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {
+                                        formatDateTime(t.createdAt).split(
+                                          ", "
+                                        )[1]
+                                      }
+                                    </span>
+                                  </div>
+                                </td>
+
+                                {/* Loại giao dịch */}
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div
+                                      className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                                        typeInfo.color === "green"
+                                          ? "bg-green-100"
+                                          : typeInfo.color === "blue"
+                                          ? "bg-blue-100"
+                                          : "bg-purple-100"
+                                      }`}
+                                    >
+                                      <i
+                                        className={`fas ${typeInfo.icon} ${
+                                          typeInfo.color === "green"
+                                            ? "text-green-600"
+                                            : typeInfo.color === "blue"
+                                            ? "text-blue-600"
+                                            : "text-purple-600"
+                                        }`}
+                                      ></i>
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-semibold text-gray-900">
+                                        {typeInfo.label}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        ID: {t._id.slice(-8)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Số tiền */}
+                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                  <div
+                                    className={`text-lg font-bold ${
+                                      t.type === "Nạp tiền" ||
+                                      t.type === "Hoàn tiền"
+                                        ? "text-green-600"
+                                        : t.type === "Rút tiền"
+                                        ? "text-blue-600"
+                                        : "text-red-600"
+                                    }`}
+                                  >
+                                    {t.type === "Nạp tiền" ||
+                                    t.type === "Hoàn tiền"
+                                      ? "+"
+                                      : "-"}
+                                    {formatCurrency(t.amount)}
+                                  </div>
+                                </td>
+
+                                {/* Trạng thái */}
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <span
+                                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${statusInfo.class}`}
+                                  >
+                                    <i
+                                      className={`fas ${
+                                        t.status === "Thành công"
+                                          ? "fa-check-circle"
+                                          : t.status === "Chờ xử lý"
+                                          ? "fa-clock"
+                                          : "fa-times-circle"
+                                      } mr-1`}
+                                    ></i>
+                                    {statusInfo.label}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                  ) : transactions.length === 0 ? (
-                    <div className="text-center py-10">
-                      <i className="fas fa-receipt text-6xl text-gray-300 mb-4"></i>
-                      <p className="text-gray-600">Chưa có giao dịch nào</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
+
+                    {/* Mobile View - Cards */}
+                    <div className="md:hidden space-y-3 p-4">
                       {transactions.map((t) => {
                         const typeInfo = getTransactionTypeLabel(t.type);
                         const statusInfo = getStatusLabel(t.status);
 
-                        // ✅ Xác định + / -
-                        const TRANSACTION_SIGN: Record<string, "+" | "-"> = {
-                          "Nạp tiền": "+",
-                          "Hoàn tiền": "+",
-                          "Thanh toán": "-",
-                          "Rút tiền": "-",
-                        };
-
-                        // ✅ Màu Tailwind an toàn
-                        const COLOR_CLASS: Record<string, string> = {
-                          green: "text-green-600",
-                          red: "text-red-600",
-                          blue: "text-blue-600",
-                          orange: "text-orange-600",
-                        };
-
                         return (
                           <div
                             key={t._id}
-                            className="bg-gray-50 hover:bg-gray-100 p-5 rounded-xl transition border border-gray-200"
+                            className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition"
                           >
-                            {/* HÀNG TRÊN */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                {/* SỐ TIỀN */}
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                              <div className="flex items-center">
                                 <div
-                                  className={`text-lg font-bold ${
-                                    COLOR_CLASS[typeInfo.color] || "text-gray-600"
+                                  className={`w-12 h-12 rounded-full flex items-center justify-center mr-3 ${
+                                    typeInfo.color === "green"
+                                      ? "bg-green-100"
+                                      : typeInfo.color === "blue"
+                                      ? "bg-blue-100"
+                                      : "bg-purple-100"
                                   }`}
                                 >
-                                  {TRANSACTION_SIGN[t.type] || "-"}
-                                  {formatCurrency(t.amount)}
+                                  <i
+                                    className={`fas ${typeInfo.icon} text-lg ${
+                                      typeInfo.color === "green"
+                                        ? "text-green-600"
+                                        : typeInfo.color === "blue"
+                                        ? "text-blue-600"
+                                        : "text-purple-600"
+                                    }`}
+                                  ></i>
                                 </div>
-
-                                {/* TRẠNG THÁI */}
-                                <div
-                                  className={`text-xs px-2 py-1 rounded-full inline-block ${statusInfo.class}`}
-                                >
-                                  {statusInfo.label}
+                                <div>
+                                  <div className="font-bold text-gray-900">
+                                    {typeInfo.label}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {formatDateTime(t.createdAt)}
+                                  </div>
                                 </div>
                               </div>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-bold ${statusInfo.class}`}
+                              >
+                                {statusInfo.label}
+                              </span>
+                            </div>
 
-                              {/* THỜI GIAN */}
-                              <div className="text-sm text-gray-500">
-                                {formatDateTime(t.createdAt)}
+                            {/* Amount */}
+                            <div className="mb-3">
+                              <div className="text-xs text-gray-500 mb-1">
+                                Số tiền
+                              </div>
+                              <div
+                                className={`text-2xl font-bold ${
+                                  t.type === "Nạp tiền" ||
+                                  t.type === "Hoàn tiền"
+                                    ? "text-green-600"
+                                    : t.type === "Rút tiền"
+                                    ? "text-blue-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {t.type === "Nạp tiền" || t.type === "Hoàn tiền"
+                                  ? "+"
+                                  : "-"}
+                                {formatCurrency(t.amount)}
                               </div>
                             </div>
-<<<<<<< HEAD
 
-                            {/* HÀNG DƯỚI */}
-                            <div className="mt-2 text-sm text-gray-700">
-                              <span className="font-medium">{t.type}</span>
-                              {t.description && (
-                                <>
-                                  <span className="mx-2 text-gray-400">•</span>
-                                  <span className="text-gray-600">{formatOrderIdShort(t.description)}</span>
-                                </>
-                              )}
-=======
-                            <div className="text-sm text-gray-500">
-                              {formatDateTime(t.createdAt)}
->>>>>>> 29c9d9d1765230f52eb3615dfd4ea13934840288
+                            {/* ID */}
+                            <div className="mb-3">
+                              <div className="text-xs text-gray-500 mb-1">
+                                Mã giao dịch
+                              </div>
+                              <div className="text-sm font-mono text-gray-700">
+                                {t._id.slice(-12)}
+                              </div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  )}
+                  </div>
+                )}
               </div>
             )}
 
