@@ -42,7 +42,7 @@ function OrderList() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
-
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -363,7 +363,12 @@ function OrderList() {
                           <Eye className="w-3.5 h-3.5" />
                           Chi tiết
                         </button>
-
+                        {errorMessage && (
+                          <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-2 mb-3 text-sm">
+                            <XCircle className="w-4 h-4" />
+                            {errorMessage}
+                          </div>
+                        )}
                         {/* Hủy đơn */}
                         {order.status === "Chờ xử lý" && (
                           <button
@@ -719,22 +724,25 @@ function OrderList() {
         open={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         onConfirm={async (note) => {
-          if (!cancelOrderId) return;
+          try {
+            await axios.put(
+              `${API_BASE_URL}/orders/${cancelOrderId}`,
+              { note },
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+            );
 
-          await axios.put(
-            `${API_BASE_URL}/orders/${cancelOrderId}`,
-            { note },
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
+            fetchOrders();
+          } catch (err: any) {
+          setErrorMessage(
+            err?.message || "Không thể hủy đơn ở trạng thái hiện tại"
           );
-
-          setShowCancelModal(false);
-          setCancelOrderId(null);
-          fetchOrders();
-        }}
+        }
+          }
+        }
       />
     </div>
   );

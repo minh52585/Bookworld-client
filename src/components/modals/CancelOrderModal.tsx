@@ -22,10 +22,10 @@ const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
 }) => {
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
-
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   if (!open) return null;
-
-  const handleSubmit = () => {
+  const handleSubmit = async  () => {
     if (!reason) return;
 
     const finalNote =
@@ -35,11 +35,24 @@ const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
         ? `Lý do hủy: ${reason}\nGhi chú: ${note}`
         : `Lý do hủy: ${reason}`;
 
-    onConfirm(finalNote);
+    try {
+      setLoading(true);
+      setError(null);
 
-    setReason("");
-    setNote("");
+      await onConfirm(finalNote); // ⬅️ CHỜ backend
+
+      setReason("");
+      setNote("");
+      onClose();
+    } catch (err: any) {
+      setError(
+        err?.message || "Không thể hủy đơn ở trạng thái hiện tại"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
+  
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
