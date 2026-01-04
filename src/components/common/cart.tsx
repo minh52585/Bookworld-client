@@ -538,9 +538,6 @@ function Cart() {
                   Tạm tính
                 </h2>
 
-<<<<<<< HEAD
-                
-=======
                 {/* Apply coupon */}
                 <div className="mb-4">
                   <label className="text-sm text-gray-600">Mã giảm giá</label>
@@ -595,7 +592,6 @@ function Cart() {
                   )}
                 </div>
 
->>>>>>> 29c9d9d1765230f52eb3615dfd4ea13934840288
                 <div className="flex justify-between text-gray-700 mb-4">
                   <span>Tổng sản phẩm đã chọn</span>
                   <span>{(subtotal - discountAmount).toLocaleString()} đ</span>

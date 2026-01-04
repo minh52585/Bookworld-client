@@ -724,27 +724,7 @@ function OrderList() {
         open={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         onConfirm={async (note) => {
-          try {
-            await axios.put(
-              `${API_BASE_URL}/orders/${cancelOrderId}`,
-              { note },
-              {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-              }
-            );
 
-<<<<<<< HEAD
-            fetchOrders();
-          } catch (err: any) {
-          setErrorMessage(
-            err?.message || "Không thể hủy đơn ở trạng thái hiện tại"
-          );
-        }
-          }
-        }
-=======
           try {
             const orderToCancel = orders.find((o) => o._id === cancelOrderId);
 
@@ -783,7 +763,6 @@ function OrderList() {
             showNotification(errMsg, "error");
           }
         }}
->>>>>>> 29c9d9d1765230f52eb3615dfd4ea13934840288
       />
     </div>
   );

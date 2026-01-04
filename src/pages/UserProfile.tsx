@@ -57,7 +57,6 @@ const UserProfile: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-<<<<<<< HEAD
   const formatOrderIdShort = (text?: string) => {
   if (!text) return "";
 
@@ -66,7 +65,6 @@ const UserProfile: React.FC = () => {
     (id) => `#${id.slice(-8)}`
   );
 };
-=======
   useEffect(() => {
     if (isAuthenticated && activeTab === "info") {
       fetchUserInfo();
@@ -97,7 +95,6 @@ const UserProfile: React.FC = () => {
       setLoadingProfile(false);
     }
   };
->>>>>>> 29c9d9d1765230f52eb3615dfd4ea13934840288
 
   const fetchWalletBalance = async () => {
     setLoadingWallet(true);
@@ -906,21 +903,8 @@ const UserProfile: React.FC = () => {
                                 {formatDateTime(t.createdAt)}
                               </div>
                             </div>
-<<<<<<< HEAD
-
-                            {/* HÀNG DƯỚI */}
-                            <div className="mt-2 text-sm text-gray-700">
-                              <span className="font-medium">{t.type}</span>
-                              {t.description && (
-                                <>
-                                  <span className="mx-2 text-gray-400">•</span>
-                                  <span className="text-gray-600">{formatOrderIdShort(t.description)}</span>
-                                </>
-                              )}
-=======
                             <div className="text-sm text-gray-500">
                               {formatDateTime(t.createdAt)}
->>>>>>> 29c9d9d1765230f52eb3615dfd4ea13934840288
                             </div>
                           </div>
                         );
