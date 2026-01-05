@@ -30,10 +30,10 @@ const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
 
     const finalNote =
       reason === "Lý do khác"
-        ? `Lý do hủy: ${note}`
+        ? `${note}`
         : note
-        ? `Lý do hủy: ${reason}\nGhi chú: ${note}`
-        : `Lý do hủy: ${reason}`;
+        ? `${reason}\nGhi chú: ${note}`
+        : `${reason}`;
 
     try {
       setLoading(true);

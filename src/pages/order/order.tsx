@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import LoginModal from "../../pages/Auth/LoginModal";
 import { API_BASE_URL } from "../../configs/api";
 import { showNotification } from "../../utils/notification";
+import { cloudinaryAxios } from "../../utils/cloudinaryAxios";
 import {
   Clock,
   AlertCircle,
@@ -18,14 +19,17 @@ import {
 } from "lucide-react";
 import CancelOrderModal from "../../components/modals/CancelOrderModal";
 import { StickyNote } from "lucide-react";
-import { Timeline, Divider } from "antd";
+import { Timeline, Divider, Modal, Select, Upload, Button, Image, Tooltip } from "antd";
 import {
   EditOutlined,
   CheckOutlined,
   CloseOutlined,
   TruckOutlined,
   ShoppingOutlined,
+  PlusOutlined
 } from "@ant-design/icons";
+
+
 const STATUS_CONFIG: Record<string, { color: string; icon?: React.ReactNode }> =
   {
     "Chờ xử lý": { color: "orange", icon: <ShoppingOutlined /> },
@@ -44,6 +48,11 @@ function OrderList() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { user, isAuthenticated } = useAuth();
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnImages, setReturnImages] = useState<string[]>([]);
+  const [submittingReturn, setSubmittingReturn] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -69,6 +78,67 @@ function OrderList() {
     }
   }, []);
 
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "reacttest");
+
+    try {
+      const res = await cloudinaryAxios.post(
+        "https://api.cloudinary.com/v1_1/dkpfaleot/image/upload",
+        formData
+      );
+
+      return res.data.secure_url;
+    } catch (error: any) {
+      console.error("Cloudinary error:", error.response?.data || error);
+
+      showNotification(
+        error.response?.data?.error?.message || "Lỗi tải ảnh",
+        "error"
+      );
+
+      throw error; // 👈 QUAN TRỌNG
+    }
+  };
+
+  const submitReturnRequest = async () => {
+  if (!returnOrderId || !returnReason) return;
+
+  try {
+    setSubmittingReturn(true);
+    const token = localStorage.getItem("token");
+
+    const res = await axios.put(
+      `${API_BASE_URL}/orders/return-request/${returnOrderId}`,
+      {
+        reason: returnReason,
+        images: returnImages,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    showNotification(res.data.message || "Đã gửi yêu cầu", "success");
+
+    setReturnModalOpen(false);
+    setReturnReason("");
+    setReturnImages([]);
+    fetchOrders();
+  } catch (error: any) {
+    showNotification(
+      error.response?.data?.message || "Không thể gửi yêu cầu",
+      "error"
+    );
+  } finally {
+    setSubmittingReturn(false);
+  }
+};
+
+
   const fetchOrders = async () => {
     setLoading(true);
     try {
@@ -82,6 +152,7 @@ function OrderList() {
     }
     setLoading(false);
   };
+
 
   const handleRefundToWallet = async (orderId: string) => {
     if (!window.confirm("Xác nhận hoàn tiền về ví?")) return;
@@ -110,34 +181,6 @@ function OrderList() {
     navigate("/");
   };
 
-  const handleRequestReturnOrder = async (orderId: string) => {
-    if (!window.confirm("Bạn chắc chắn muốn yêu cầu Trả hàng/Hoàn tiền?"))
-      return;
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.post(
-        `${API_BASE_URL}/orders/return-request/${orderId}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      showNotification(
-        res.data.message || "Đã gửi yêu cầu Trả hàng/Hoàn tiền",
-        "success"
-      );
-      fetchOrders();
-    } catch (error: any) {
-      const msg =
-        error.response?.data?.message ||
-        "Không thể gửi yêu cầu Trả hàng/Hoàn tiền";
-      showNotification(msg, "error");
-    }
-  };
 
   if (!isAuthenticated) {
     return (
@@ -335,9 +378,11 @@ function OrderList() {
                         );
                       })()}
                     </td>
-                    <td className="px-6 py-4 text-sm overflow-hidden">
-                      {order.note ? (
-                        <div className="relative group inline-block">
+                    <td className="px-6 py-4 text-sm">
+                      {order.note &&
+                      (order.status === "Đang yêu cầu Trả hàng/Hoàn tiền" ||
+                        order.status === "Đã hủy") ? (
+                        <Tooltip title={order.note} placement="topLeft">
                           <button
                             className="inline-flex items-center gap-1 px-3 py-1 
                                       rounded-full bg-purple-100 text-purple-700 
@@ -346,15 +391,7 @@ function OrderList() {
                             <StickyNote className="w-4 h-4" />
                             Ghi chú
                           </button>
-                          <div
-                            className="fixed z-50 hidden group-hover:block 
-                                      mt-2 max-w-xs rounded-lg bg-gray-900 
-                                      text-white text-xs px-3 py-2 shadow-lg"
-                            style={{ transform: "translateY(8px)" }}
-                          >
-                            {order.note}
-                          </div>
-                        </div>
+                        </Tooltip>
                       ) : (
                         <span className="text-gray-400 italic">—</span>
                       )}
@@ -396,21 +433,24 @@ function OrderList() {
                         )}
 
                         {/* Trả hàng / hoàn tiền */}
-                        {order.status === "Giao hàng thành công" &&
-                          order.returnStatus !== "RETURN_REQUESTED" && (
-                            <button
-                              className="inline-flex items-center gap-1.5 h-8 px-3 
-                     text-xs font-medium text-white 
-                     bg-orange-500 hover:bg-orange-600 
-                     rounded-md transition whitespace-nowrap"
-                              onClick={() =>
-                                handleRequestReturnOrder(order._id)
-                              }
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              Trả / Hoàn
-                            </button>
-                          )}
+                      {order.status === "Giao hàng thành công" &&
+                        (order.status_logs?.filter(
+                          (log: any) => log.status === "Đang yêu cầu Trả hàng/Hoàn tiền"
+                        ).length || 0) <= 0 && (
+                          <button
+                            className="inline-flex items-center gap-1.5 h-8 px-3 
+                                      text-xs font-medium text-white 
+                                      bg-orange-500 hover:bg-orange-600 
+                                      rounded-md transition whitespace-nowrap"
+                            onClick={() => {
+                              setReturnOrderId(order._id);
+                              setReturnModalOpen(true);
+                            }}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            Yêu cầu Trả hàng / Hoàn tiền
+                          </button>
+                      )}
                           {order.payment?.status === "Chưa thanh toán" &&
                             order.payment?.payment_url && (
                               <button
@@ -714,7 +754,7 @@ function OrderList() {
                   Đóng
                 </button>
               </div>
-
+            
               <Divider orientation="left">
                 Lịch sử thay đổi trạng thái đơn hàng
               </Divider>
@@ -740,6 +780,30 @@ function OrderList() {
                   }))}
                 />
               </div>
+
+            <Divider orientation="left">
+                Hình ảnh sản phẩm thực
+            </Divider>
+            {selectedOrder.images_return && selectedOrder.images_return.length > 0 && (
+              <div style={{ marginTop: 8, marginLeft: 100 }}>
+                <Image.PreviewGroup>
+                  {selectedOrder.images_return.map((img: string, index: number) => (
+                    <Image
+                      key={index}
+                      src={img}
+                      width={80}  
+                      height={80}
+                      style={{
+                        objectFit: "cover",
+                        borderRadius: 6,
+                        marginRight: 8,
+                        cursor: "pointer",
+                      }}
+                    />
+                  ))}
+                </Image.PreviewGroup>
+              </div>
+            )}
             </div>
           </div>
         )}
@@ -788,7 +852,90 @@ function OrderList() {
           }
         }}
       />
+        <Modal
+        title="Yêu cầu Trả hàng / Hoàn tiền"
+        open={returnModalOpen}
+        onCancel={() => {
+          setReturnModalOpen(false);
+          setReturnReason("");
+          setReturnImages([]);
+        }}
+        footer={null}
+      >
+        {/* Lý do */}
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">Lý do</label>
+          <Select
+            placeholder="Chọn lý do"
+            style={{ width: "100%" }}
+            value={returnReason}
+            onChange={setReturnReason}
+            options={[
+              { value: "Sản phẩm lỗi", label: "Sản phẩm lỗi" },
+              { value: "Giao sai sản phẩm", label: "Giao sai sản phẩm" },
+              { value: "Không đúng mô tả", label: "Không đúng mô tả" },
+              { value: "Khác", label: "Khác" },
+            ]}
+          />
+        </div>
+
+        {/* Upload ảnh */}
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">
+            Ảnh minh chứng (tối đa 3)
+          </label>
+
+          <Upload
+            listType="picture-card"
+            maxCount={3}
+           beforeUpload={async (file) => {
+            try {
+              const url = await uploadImage(file);
+              setReturnImages((prev) => [...prev, url]);
+            } catch {
+              showNotification("Upload ảnh thất bại", "error");
+            }
+            return false;
+          }}
+
+            onRemove={(file) => {
+            setReturnImages((prev) =>
+              prev.filter((_, idx) => String(idx) !== file.uid)
+            );
+          }}
+            fileList={returnImages.map((url, idx) => ({
+              uid: String(idx),
+              name: `image-${idx}`,
+              status: "done",
+              url,
+            }))}
+          >
+            {returnImages.length < 3 && (
+              <div>
+                <PlusOutlined />
+                <div style={{ marginTop: 8 }}>Tải ảnh</div>
+              </div>
+            )}
+          </Upload>
+        </div>
+
+        {/* Submit */}
+        <Button
+          type="primary"
+          danger
+          block
+          loading={submittingReturn}
+          disabled={!returnReason}
+          onClick={submitReturnRequest}
+        >
+          Gửi yêu cầu
+        </Button>
+      </Modal>
+
+      
     </div>
+
+    
   );
 }
 
