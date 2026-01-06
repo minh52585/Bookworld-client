@@ -13,6 +13,7 @@ import SearchPage from "../pages/SearchPage";
 import FavoritesPage from "../pages/FavoritePage";
 import UserProfile from "../pages/UserProfile";
 import AllProducts from "../components/common/AllProductPage";
+import PromotionsPage from "../pages/PromotionsPage";
 import CategoryPage from "../components/common/CategoryPage";
 
 export const router = createBrowserRouter([
@@ -73,7 +74,11 @@ export const router = createBrowserRouter([
         element: <AllProducts />,
       },
       {
-        path: "/categories/:id",
+        path: "promotions",
+        element: <PromotionsPage />,
+      },
+      {
+        path: "categories/:id",
         element: <CategoryPage />,
       },
     ],

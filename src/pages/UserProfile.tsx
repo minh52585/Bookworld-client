@@ -23,15 +23,30 @@ const UserProfile: React.FC = () => {
   const [page] = useState(1);
   const [bankCards, setBankCards] = useState<any[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<string>(""); // ID thẻ được chọn
+  const [selectedCard, setSelectedCard] = useState<string>("");
   const [cardForm, setCardForm] = useState({
     bankName: "Vietcombank",
     accountNumber: "",
     accountName: "",
     isDefault: false,
   });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    avatar: "",
+  });
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
   const limit = 20;
-
+  const TRANSACTION_SIGN: Record<string, "+" | "-"> = {
+    "Nạp tiền": "+",
+    "Hoàn tiền": "+",
+    "Thanh toán": "-",
+    "Rút tiền": "-",
+  };
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
@@ -41,6 +56,45 @@ const UserProfile: React.FC = () => {
       fetchBankCards();
     }
   }, [isAuthenticated, navigate]);
+
+  const formatOrderIdShort = (text?: string) => {
+  if (!text) return "";
+
+  return text.replace(
+    /\b[a-f0-9]{24}\b/gi,
+    (id) => `#${id.slice(-8)}`
+  );
+};
+  useEffect(() => {
+    if (isAuthenticated && activeTab === "info") {
+      fetchUserInfo();
+    }
+  }, [isAuthenticated, activeTab]);
+
+  const fetchUserInfo = async () => {
+    setLoadingProfile(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await axios.get(`${API_BASE_URL}/me/infor`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = response.data.data;
+      setProfileForm({
+        name: data.name || "",
+        email: data.email || "",
+        phone: data.phone || "",
+        address: data.address || "",
+        avatar: data.avatar || "",
+      });
+    } catch (error) {
+      console.error("Lỗi lấy thông tin:", error);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   const fetchWalletBalance = async () => {
     setLoadingWallet(true);
@@ -95,6 +149,7 @@ const UserProfile: React.FC = () => {
       setLoadingTransactions(false);
     }
   };
+
   const fetchBankCards = async () => {
     setLoadingCards(true);
     try {
@@ -105,7 +160,6 @@ const UserProfile: React.FC = () => {
 
       if (response.data?.data) {
         setBankCards(response.data.data);
-        // Set thẻ mặc định làm thẻ được chọn
         const defaultCard = response.data.data.find((c: any) => c.isDefault);
         if (defaultCard) setSelectedCard(defaultCard._id);
       }
@@ -115,6 +169,7 @@ const UserProfile: React.FC = () => {
       setLoadingCards(false);
     }
   };
+
   const handleDeposit = async () => {
     const amount = parseInt(depositAmount);
 
@@ -159,13 +214,11 @@ const UserProfile: React.FC = () => {
       if (response.data.success && response.data.data.paymentUrl) {
         showNotification("Đang chuyển đến trang thanh toán VNPay...", "info");
 
-        // Lưu transaction ID để tracking
         localStorage.setItem(
           "pending_deposit_id",
           response.data.data.balance._id
         );
 
-        // Chuyển hướng đến VNPay
         window.location.href = response.data.data.paymentUrl;
       } else {
         showNotification(
@@ -242,6 +295,46 @@ const UserProfile: React.FC = () => {
     }
   };
 
+  const handleUpdateProfile = async () => {
+    if (!profileForm.name.trim()) {
+      showNotification("Vui lòng nhập họ tên!", "error");
+      return;
+    }
+
+    setLoadingUpdate(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${API_BASE_URL}/me/infor`,
+        {
+          name: profileForm.name,
+          // Không gửi email để tránh thay đổi tài khoản đăng nhập
+          phone: profileForm.phone,
+          address: profileForm.address,
+          avatar: profileForm.avatar,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      showNotification("Cập nhật thông tin thành công!", "success");
+      setIsEditingProfile(false);
+
+      fetchUserInfo();
+    } catch (error: any) {
+      showNotification(
+        error.response?.data?.message || "Không thể cập nhật thông tin",
+        "error"
+      );
+    } finally {
+      setLoadingUpdate(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -273,7 +366,7 @@ const UserProfile: React.FC = () => {
       if (response.data.success) {
         showNotification("Thêm thẻ thành công!", "success");
         setShowAddCardModal(false);
-        fetchBankCards(); // Reload danh sách
+        fetchBankCards();
       }
     } catch (error: any) {
       showNotification(
@@ -282,6 +375,7 @@ const UserProfile: React.FC = () => {
       );
     }
   };
+
   const resetCardForm = () => {
     setCardForm({
       bankName: "Vietcombank",
@@ -290,6 +384,7 @@ const UserProfile: React.FC = () => {
       isDefault: false,
     });
   };
+
   const handleDeleteCard = async (cardId: string) => {
     if (!window.confirm("Bạn có chắc muốn xóa thẻ này?")) return;
 
@@ -332,6 +427,7 @@ const UserProfile: React.FC = () => {
       );
     }
   };
+
   const handleLogout = () => {
     if (window.confirm("Bạn có chắc muốn đăng xuất?")) {
       logout();
@@ -364,6 +460,7 @@ const UserProfile: React.FC = () => {
     };
     return labels[type] || { label: type, icon: "fa-exchange", color: "gray" };
   };
+
   const formatDateTime = (value?: string) => {
     if (!value) return "";
     return new Date(value).toLocaleString("vi-VN", {
@@ -392,7 +489,6 @@ const UserProfile: React.FC = () => {
     );
   };
 
-  // Tính toán thống kê từ transactions thực tế
   const totalDeposit = transactions
     .filter((t) => t.type === "Nạp tiền" && t.status === "Thành công")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -414,11 +510,26 @@ const UserProfile: React.FC = () => {
             <div className="flex items-center space-x-6">
               {/* Avatar */}
               <div className="relative">
-                <div className="w-32 h-32 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+                {profileForm.avatar ? (
+                  <img
+                    src={profileForm.avatar}
+                    alt="Avatar"
+                    className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      e.currentTarget.nextElementSibling.style.display = "flex";
+                    }}
+                  />
+                ) : null}
+                <div
+                  className={`w-32 h-32 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg ${
+                    profileForm.avatar ? "hidden" : ""
+                  }`}
+                >
                   {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                 </div>
                 {user.role === "admin" && (
-                  <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md">
+                  <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-black text-xs px-3 py-1 rounded-full font-bold shadow-md">
                     ADMIN
                   </div>
                 )}
@@ -729,6 +840,39 @@ const UserProfile: React.FC = () => {
                   </button>
                 </div>
 
+                {/* Thống kê tổng quan */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border-2 border-green-200">
+                    <div className="text-green-700 font-semibold mb-1 text-sm">
+                      <i className="fas fa-arrow-down mr-2"></i>
+                      Tổng nạp
+                    </div>
+                    <div className="text-xl font-bold text-green-800">
+                      {formatCurrency(totalDeposit)}
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl border-2 border-blue-200">
+                    <div className="text-blue-700 font-semibold mb-1 text-sm">
+                      <i className="fas fa-arrow-up mr-2"></i>
+                      Tổng rút
+                    </div>
+                    <div className="text-xl font-bold text-blue-800">
+                      {formatCurrency(totalWithdraw)}
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-xl border-2 border-purple-200">
+                    <div className="text-purple-700 font-semibold mb-1 text-sm">
+                      <i className="fas fa-shopping-bag mr-2"></i>
+                      Tổng chi tiêu
+                    </div>
+                    <div className="text-xl font-bold text-red-700">
+                      {formatCurrency(totalPurchase)}
+                    </div>
+                  </div>
+                </div>
+
                 {loadingTransactions ? (
                   <div className="text-center py-10">
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto mb-4"></div>
@@ -740,112 +884,513 @@ const UserProfile: React.FC = () => {
                     <p className="text-gray-600">Chưa có giao dịch nào</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {transactions.map((t) => {
-                      const typeInfo = getTransactionTypeLabel(t.type);
-                      const statusInfo = getStatusLabel(t.status);
+                  <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
+                    {/* Desktop View - Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">
+                              <i className="far fa-clock mr-2"></i>
+                              Thời gian
+                            </th>
+                            <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">
+                              <i className="fas fa-exchange-alt mr-2"></i>
+                              Loại giao dịch
+                            </th>
+                            <th className="px-6 py-4 text-right text-sm font-bold uppercase tracking-wider">
+                              <i className="fas fa-money-bill-wave mr-2"></i>
+                              Số tiền
+                            </th>
+                            <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                              <i className="fas fa-info-circle mr-2"></i>
+                              Trạng thái
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {transactions.map((t, index) => {
+                            const typeInfo = getTransactionTypeLabel(t.type);
+                            const statusInfo = getStatusLabel(t.status);
 
-                      return (
-                        <div
-                          key={t._id}
-                          className="bg-gray-50 hover:bg-gray-100 p-5 rounded-xl transition border border-gray-200"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div
-                                className={`text-lg font-bold text-${typeInfo.color}-600`}
+                            return (
+                              <tr
+                                key={t._id}
+                                className={`hover:bg-gray-50 transition ${
+                                  index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }`}
                               >
-                                {t.type === "Nạp tiền" ? "+" : "-"}
-                                {formatCurrency(t.amount)}
+                                {/* Thời gian */}
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {
+                                        formatDateTime(t.createdAt).split(
+                                          ", "
+                                        )[0]
+                                      }
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {
+                                        formatDateTime(t.createdAt).split(
+                                          ", "
+                                        )[1]
+                                      }
+                                    </span>
+                                  </div>
+                                </td>
+
+                                {/* Loại giao dịch */}
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div
+                                      className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                                        typeInfo.color === "green"
+                                          ? "bg-green-100"
+                                          : typeInfo.color === "blue"
+                                          ? "bg-blue-100"
+                                          : "bg-purple-100"
+                                      }`}
+                                    >
+                                      <i
+                                        className={`fas ${typeInfo.icon} ${
+                                          typeInfo.color === "green"
+                                            ? "text-green-600"
+                                            : typeInfo.color === "blue"
+                                            ? "text-blue-600"
+                                            : "text-purple-600"
+                                        }`}
+                                      ></i>
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-semibold text-gray-900">
+                                        {typeInfo.label}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        ID: {t._id.slice(-8)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Số tiền */}
+                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                  <div
+                                    className={`text-lg font-bold ${
+                                      t.type === "Nạp tiền" ||
+                                      t.type === "Hoàn tiền"
+                                        ? "text-green-600"
+                                        : t.type === "Rút tiền"
+                                        ? "text-blue-600"
+                                        : "text-red-600"
+                                    }`}
+                                  >
+                                    {t.type === "Nạp tiền" ||
+                                    t.type === "Hoàn tiền"
+                                      ? "+"
+                                      : "-"}
+                                    {formatCurrency(t.amount)}
+                                  </div>
+                                </td>
+
+                                {/* Trạng thái */}
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <span
+                                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${statusInfo.class}`}
+                                  >
+                                    <i
+                                      className={`fas ${
+                                        t.status === "Thành công"
+                                          ? "fa-check-circle"
+                                          : t.status === "Chờ xử lý"
+                                          ? "fa-clock"
+                                          : "fa-times-circle"
+                                      } mr-1`}
+                                    ></i>
+                                    {statusInfo.label}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile View - Cards */}
+                    <div className="md:hidden space-y-3 p-4">
+                      {transactions.map((t) => {
+                        const typeInfo = getTransactionTypeLabel(t.type);
+                        const statusInfo = getStatusLabel(t.status);
+
+                        return (
+                          <div
+                            key={t._id}
+                            className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition"
+                          >
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                              <div className="flex items-center">
+                                <div
+                                  className={`w-12 h-12 rounded-full flex items-center justify-center mr-3 ${
+                                    typeInfo.color === "green"
+                                      ? "bg-green-100"
+                                      : typeInfo.color === "blue"
+                                      ? "bg-blue-100"
+                                      : "bg-purple-100"
+                                  }`}
+                                >
+                                  <i
+                                    className={`fas ${typeInfo.icon} text-lg ${
+                                      typeInfo.color === "green"
+                                        ? "text-green-600"
+                                        : typeInfo.color === "blue"
+                                        ? "text-blue-600"
+                                        : "text-purple-600"
+                                    }`}
+                                  ></i>
+                                </div>
+                                <div>
+                                  <div className="font-bold text-gray-900">
+                                    {typeInfo.label}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {formatDateTime(t.createdAt)}
+                                  </div>
+                                </div>
                               </div>
-                              <div
-                                className={`text-xs px-2 py-1 rounded-full inline-block ${statusInfo.class}`}
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-bold ${statusInfo.class}`}
                               >
                                 {statusInfo.label}
+                              </span>
+                            </div>
+
+                            {/* Amount */}
+                            <div className="mb-3">
+                              <div className="text-xs text-gray-500 mb-1">
+                                Số tiền
+                              </div>
+                              <div
+                                className={`text-2xl font-bold ${
+                                  t.type === "Nạp tiền" ||
+                                  t.type === "Hoàn tiền"
+                                    ? "text-green-600"
+                                    : t.type === "Rút tiền"
+                                    ? "text-blue-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {t.type === "Nạp tiền" || t.type === "Hoàn tiền"
+                                  ? "+"
+                                  : "-"}
+                                {formatCurrency(t.amount)}
                               </div>
                             </div>
-                            {/* THỜI GIAN */}
-                            <div className="text-sm text-gray-500">
-                              {formatDateTime(t.createdAt)}
+
+                            {/* ID */}
+                            <div className="mb-3">
+                              <div className="text-xs text-gray-500 mb-1">
+                                Mã giao dịch
+                              </div>
+                              <div className="text-sm font-mono text-gray-700">
+                                {t._id.slice(-12)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Thông tin cá nhân */}
+            {/* TAB: Thông tin cá nhân */}
             {activeTab === "info" && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  Thông tin tài khoản
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-user mr-2 text-purple-600"></i>
-                      Họ và tên
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.fullname || "Chưa cập nhật"}
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-envelope mr-2 text-purple-600"></i>
-                      Email
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.email}
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-phone mr-2 text-purple-600"></i>
-                      Số điện thoại
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.fullphone || "Chưa cập nhật"}
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-shield-alt mr-2 text-purple-600"></i>
-                      Vai trò
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.role === "admin" ? "Quản trị viên" : "Thành viên"}
-                    </p>
-                  </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Thông tin tài khoản
+                  </h2>
+                  {!isEditingProfile ? (
+                    <button
+                      onClick={() => setIsEditingProfile(true)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md"
+                    >
+                      <i className="fas fa-edit mr-2"></i>
+                      Chỉnh sửa thông tin
+                    </button>
+                  ) : (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setIsEditingProfile(false);
+                          fetchUserInfo();
+                        }}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md"
+                      >
+                        <i className="fas fa-times mr-2"></i>
+                        Hủy
+                      </button>
+                      <button
+                        onClick={handleUpdateProfile}
+                        disabled={loadingUpdate}
+                        className={`px-6 py-3 rounded-lg font-semibold transition shadow-md ${
+                          loadingUpdate
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-green-600 hover:bg-green-700 text-white"
+                        }`}
+                      >
+                        {loadingUpdate ? (
+                          <>
+                            <i className="fas fa-spinner fa-spin mr-2"></i>
+                            Đang lưu...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-save mr-2"></i>
+                            Lưu thay đổi
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {user.address && (
-                  <div className="bg-gray-50 p-4 rounded-lg mt-4">
-                    <label className="text-sm font-semibold text-gray-600 mb-2 block">
-                      <i className="fas fa-map-marker-alt mr-2 text-purple-600"></i>
-                      Địa chỉ
-                    </label>
-                    <p className="text-lg font-medium text-gray-800">
-                      {user.address.street && `${user.address.street}, `}
-                      {user.address.city && `${user.address.city}, `}
-                      {user.address.province || "Chưa cập nhật"}
-                    </p>
+                {loadingProfile ? (
+                  <div className="text-center py-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent mx-auto"></div>
+                    <p className="text-gray-600 mt-4">Đang tải thông tin...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Avatar Section */}
+                    <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-xl border-2 border-purple-200">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">
+                        <i className="fas fa-image mr-2 text-purple-600"></i>
+                        Ảnh đại diện
+                      </h3>
+                      <div className="flex items-center gap-6 flex-wrap">
+                        {/* Preview Avatar */}
+                        <div className="relative">
+                          {profileForm.avatar ? (
+                            <img
+                              src={profileForm.avatar}
+                              alt="Avatar Preview"
+                              className="w-24 h-24 rounded-full object-cover shadow-lg border-4 border-white"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                e.currentTarget.nextElementSibling.style.display =
+                                  "flex";
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className={`w-24 h-24 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ${
+                              profileForm.avatar ? "hidden" : ""
+                            }`}
+                          >
+                            {profileForm.name
+                              ? profileForm.name.charAt(0).toUpperCase()
+                              : user.name
+                              ? user.name.charAt(0).toUpperCase()
+                              : "U"}
+                          </div>
+                        </div>
+
+                        {/* Upload Options */}
+                        {isEditingProfile && (
+                          <div className="flex-1 space-y-3">
+                            {/* Option 1: Nhập URL */}
+                            <div>
+                              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                                Nhập URL ảnh
+                              </label>
+                              <input
+                                type="text"
+                                value={profileForm.avatar}
+                                onChange={(e) =>
+                                  setProfileForm({
+                                    ...profileForm,
+                                    avatar: e.target.value,
+                                  })
+                                }
+                                placeholder="https://example.com/avatar.jpg"
+                                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm"
+                              />
+                            </div>
+
+                            {/* Option 2: Upload File */}
+                            <div>
+                              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                                Hoặc tải ảnh lên
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    if (file.size > 2 * 1024 * 1024) {
+                                      showNotification(
+                                        "Ảnh không được vượt quá 2MB!",
+                                        "error"
+                                      );
+                                      return;
+                                    }
+
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      setProfileForm({
+                                        ...profileForm,
+                                        avatar: reader.result as string,
+                                      });
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 cursor-pointer"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                JPG, PNG, GIF (tối đa 2MB)
+                              </p>
+                            </div>
+
+                            {/* Remove Avatar Button */}
+                            {profileForm.avatar && (
+                              <button
+                                onClick={() =>
+                                  setProfileForm({
+                                    ...profileForm,
+                                    avatar: "",
+                                  })
+                                }
+                                className="text-sm text-red-600 hover:text-red-700 font-semibold"
+                              >
+                                <i className="fas fa-trash mr-1"></i>
+                                Xóa ảnh đại diện
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Other Info Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Họ và tên */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-user mr-2 text-purple-600"></i>
+                          Họ và tên <span className="text-red-500">*</span>
+                        </label>
+                        {isEditingProfile ? (
+                          <input
+                            type="text"
+                            value={profileForm.name}
+                            onChange={(e) =>
+                              setProfileForm({
+                                ...profileForm,
+                                name: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            placeholder="Nhập họ và tên"
+                          />
+                        ) : (
+                          <p className="text-lg font-medium text-gray-800">
+                            {profileForm.name ||
+                              user.fullname ||
+                              "Chưa cập nhật"}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Email */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-envelope mr-2 text-purple-600"></i>
+                          Email (Tài khoản đăng nhập)
+                        </label>
+                        <p className="text-lg font-medium text-gray-800">
+                          {profileForm.email || user.email}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          <i className="fas fa-lock mr-1"></i>
+                          Email không thể thay đổi vì đây là tài khoản đăng nhập
+                        </p>
+                      </div>
+
+                      {/* Số điện thoại */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-phone mr-2 text-purple-600"></i>
+                          Số điện thoại
+                        </label>
+                        {isEditingProfile ? (
+                          <input
+                            type="text"
+                            value={profileForm.phone}
+                            onChange={(e) =>
+                              setProfileForm({
+                                ...profileForm,
+                                phone: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            placeholder="Nhập số điện thoại"
+                          />
+                        ) : (
+                          <p className="text-lg font-medium text-gray-800">
+                            {profileForm.phone ||
+                              user.fullphone ||
+                              "Chưa cập nhật"}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Vai trò */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-shield-alt mr-2 text-purple-600"></i>
+                          Vai trò
+                        </label>
+                        <p className="text-lg font-medium text-gray-800">
+                          {user.role === "admin"
+                            ? "Quản trị viên"
+                            : "Thành viên"}
+                        </p>
+                      </div>
+
+                      {/* Địa chỉ */}
+                      <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                        <label className="text-sm font-semibold text-gray-600 mb-2 block">
+                          <i className="fas fa-map-marker-alt mr-2 text-purple-600"></i>
+                          Địa chỉ
+                        </label>
+                        {isEditingProfile ? (
+                          <textarea
+                            value={profileForm.address}
+                            onChange={(e) =>
+                              setProfileForm({
+                                ...profileForm,
+                                address: e.target.value,
+                              })
+                            }
+                            rows={3}
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            placeholder="Nhập địa chỉ đầy đủ"
+                          />
+                        ) : (
+                          <p className="text-lg font-medium text-gray-800">
+                            {profileForm.address || "Chưa cập nhật"}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
-
-                <div className="flex justify-end mt-6">
-                  <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">
-                    <i className="fas fa-edit mr-2"></i>
-                    Chỉnh sửa thông tin
-                  </button>
-                </div>
               </div>
             )}
           </div>
@@ -855,23 +1400,6 @@ const UserProfile: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
           <Link
             to="/cart"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition group"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                  Giỏ hàng
-                </h3>
-                <p className="text-gray-600 text-sm">Xem giỏ hàng của bạn</p>
-              </div>
-              <div className="text-3xl text-purple-600 group-hover:scale-110 transition">
-                <i className="fas fa-shopping-cart"></i>
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            to="/"
             className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition group"
           >
             <div className="flex items-center justify-between">
@@ -1023,7 +1551,7 @@ const UserProfile: React.FC = () => {
                 <option value="">-- Chọn thẻ nhận tiền --</option>
                 {bankCards.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.bankName} - {maskCardNumber(c.accountNumber)}
+                    {c.bankName} - {maskCardNumber(c.accountNumber)} - {c.accountName}
                   </option>
                 ))}
               </select>
@@ -1087,7 +1615,6 @@ const UserProfile: React.FC = () => {
       )}
 
       {/* MODAL: Thêm thẻ */}
-
       {showAddCardModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -1108,7 +1635,6 @@ const UserProfile: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {/* Ngân hàng */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Ngân hàng <span className="text-red-500">*</span>
@@ -1133,7 +1659,6 @@ const UserProfile: React.FC = () => {
                 </select>
               </div>
 
-              {/* Số tài khoản */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Số tài khoản <span className="text-red-500">*</span>
@@ -1142,7 +1667,6 @@ const UserProfile: React.FC = () => {
                   type="text"
                   value={cardForm.accountNumber}
                   onChange={(e) => {
-                    // Chỉ cho phép nhập số
                     const value = e.target.value.replace(/\D/g, "");
                     setCardForm({ ...cardForm, accountNumber: value });
                   }}
@@ -1154,7 +1678,6 @@ const UserProfile: React.FC = () => {
                 </p>
               </div>
 
-              {/* Tên chủ tài khoản */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Tên chủ tài khoản <span className="text-red-500">*</span>
@@ -1176,7 +1699,6 @@ const UserProfile: React.FC = () => {
                 </p>
               </div>
 
-              {/* Checkbox mặc định */}
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1192,10 +1714,8 @@ const UserProfile: React.FC = () => {
               </label>
             </div>
 
-            {/* Button thêm thẻ */}
             <button
               onClick={() => {
-                // Validation
                 if (!cardForm.bankName) {
                   showNotification("Vui lòng chọn ngân hàng!", "error");
                   return;
@@ -1231,6 +1751,7 @@ const UserProfile: React.FC = () => {
           </div>
         </div>
       )}
+
       {/* Font Awesome CDN */}
       <link
         rel="stylesheet"
