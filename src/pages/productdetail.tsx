@@ -62,6 +62,7 @@ const BookDetailPage: React.FC = () => {
   const [showFavoriteNotification, setShowFavoriteNotification] =
     useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState("");
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   // Review states
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -595,6 +596,25 @@ const BookDetailPage: React.FC = () => {
   const getProductName = (p: Product) => p.name || "Sản phẩm";
   const getProductImage = (p: Product) =>
     p.image || p.images?.[0] || "/placeholder.jpg";
+  const getProductImages = (p: Product) => {
+    if (p.images && p.images.length > 0) return p.images;
+    if (p.image) return [p.image];
+    return ["/placeholder.jpg"];
+  };
+
+  const handlePreviousImage = () => {
+    const images = getProductImages(product);
+    setSelectedImageIndex((prev) => 
+      prev === 0 ? images.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    const images = getProductImages(product);
+    setSelectedImageIndex((prev) => 
+      prev === images.length - 1 ? 0 : prev + 1
+    );
+  };
 
   if (loading)
     return <div className="p-10 text-center text-xl">Đang tải...</div>;
@@ -681,7 +701,7 @@ const BookDetailPage: React.FC = () => {
           <div className="col-span-6">
             <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-lg p-8 relative">
               <img
-                src={getProductImage(product)}
+                src={getProductImages(product)[selectedImageIndex]}
                 alt={getProductName(product)}
                 className="w-full rounded-lg shadow-xl"
                 onError={(e) => {
@@ -690,7 +710,58 @@ const BookDetailPage: React.FC = () => {
                     'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="600"%3E%3Crect width="400" height="600" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
                 }}
               />
+              
+              {/* Navigation Arrows */}
+              {getProductImages(product).length > 1 && (
+                <>
+                  <button
+                    onClick={handlePreviousImage}
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full w-10 h-10 flex items-center justify-center transition"
+                  >
+                    <i className="fas fa-chevron-left"></i>
+                  </button>
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full w-10 h-10 flex items-center justify-center transition"
+                  >
+                    <i className="fas fa-chevron-right"></i>
+                  </button>
+                  
+                  {/* Image Counter */}
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                    {selectedImageIndex + 1} / {getProductImages(product).length}
+                  </div>
+                </>
+              )}
             </div>
+            
+            {/* Thumbnail Images */}
+            {getProductImages(product).length > 1 && (
+              <div className="flex gap-2 mt-4 overflow-x-auto">
+                {getProductImages(product).map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition ${
+                      selectedImageIndex === index
+                        ? "border-purple-600"
+                        : "border-gray-300 hover:border-purple-400"
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      alt={`${getProductName(product)} - ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src =
+                          'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect width="80" height="80" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="12" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
