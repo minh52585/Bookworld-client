@@ -76,8 +76,12 @@ const RegisterPage: React.FC = () => {
       );
 
       setSuccess(true);
+
       setTimeout(() => {
-        navigate("/login", { replace: true });
+        navigate("/verify-email", {
+          state: { email: formData.email },
+          replace: true,
+        });
       }, 1500);
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || "Đăng ký thất bại!";
@@ -151,7 +155,7 @@ const RegisterPage: React.FC = () => {
               Đăng ký thành công!
             </p>
             <p style={{ fontSize: "0.875rem", opacity: 0.95 }}>
-              Đang chuyển đến trang đăng nhập...
+              Vui lòng kiểm tra email để xác minh tài khoản...
             </p>
           </div>
         </div>
