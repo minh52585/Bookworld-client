@@ -58,13 +58,10 @@ const UserProfile: React.FC = () => {
   }, [isAuthenticated, navigate]);
 
   const formatOrderIdShort = (text?: string) => {
-  if (!text) return "";
+    if (!text) return "";
 
-  return text.replace(
-    /\b[a-f0-9]{24}\b/gi,
-    (id) => `#${id.slice(-8)}`
-  );
-};
+    return text.replace(/\b[a-f0-9]{24}\b/gi, (id) => `#${id.slice(-8)}`);
+  };
   useEffect(() => {
     if (isAuthenticated && activeTab === "info") {
       fetchUserInfo();
@@ -1551,7 +1548,8 @@ const UserProfile: React.FC = () => {
                 <option value="">-- Chọn thẻ nhận tiền --</option>
                 {bankCards.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.bankName} - {maskCardNumber(c.accountNumber)} - {c.accountName}
+                    {c.bankName} - {maskCardNumber(c.accountNumber)} -{" "}
+                    {c.accountName}
                   </option>
                 ))}
               </select>

@@ -498,11 +498,14 @@ const Header = () => {
               </div>
             </div>
 
-            <Link to="/promotions" className="text-purple-600 hover:text-purple-700 font-medium">
+            <Link
+              to="/promotions"
+              className="text-purple-600 hover:text-purple-700 font-medium"
+            >
               Khuyến mãi tháng
             </Link>
 
-            <a href="#" className="hover:text-purple-600">
+            <a href="Contacts" className="hover:text-purple-600">
               Liên hệ
             </a>
           </div>

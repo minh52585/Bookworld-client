@@ -16,7 +16,7 @@ import AllProducts from "../components/common/AllProductPage";
 import PromotionsPage from "../pages/PromotionsPage";
 import CategoryPage from "../components/common/CategoryPage";
 import VerifyEmailPage from "../pages/Auth/VerifyEmailPage";
-
+import ContactInfo from "../pages/ContactPage";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -85,6 +85,10 @@ export const router = createBrowserRouter([
       {
         path: "verify-email",
         element: <VerifyEmailPage />,
+      },
+      {
+        path: "contacts",
+        element: <ContactInfo />,
       },
     ],
   },
