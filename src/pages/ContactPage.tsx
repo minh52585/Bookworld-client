@@ -50,21 +50,6 @@ export default function ContactInfo() {
             </div>
           </a>
 
-          {/* Location */}
-          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 flex items-center gap-5">
-            <div className="bg-gradient-to-br from-purple-600 to-indigo-600 p-4 rounded-2xl">
-              <MapPin className="w-8 h-8 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-gray-600 mb-1 uppercase tracking-wide">
-                Địa chỉ
-              </h3>
-              <p className="text-xl font-semibold text-gray-700">
-                Việt Trì, Phú Thọ, Việt Nam
-              </p>
-            </div>
-          </div>
-
           {/* Working Hours */}
           <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 flex items-center gap-5">
             <div className="bg-gradient-to-br from-purple-600 to-indigo-600 p-4 rounded-2xl">
@@ -75,7 +60,7 @@ export default function ContactInfo() {
                 Giờ làm việc
               </h3>
               <p className="text-xl font-semibold text-gray-700">
-                Thứ 2 - Thứ 7: 8:00 - 18:00
+                Thứ 2 - Thứ 6: 9:00AM - 11:00PM
               </p>
             </div>
           </div>

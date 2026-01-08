@@ -470,7 +470,7 @@ const Header = () => {
             <a href="/" className="hover:text-purple-600">
               Trang chủ
             </a>
-            <a href="#" className="hover:text-purple-600">
+            <a href="about" className="hover:text-purple-600">
               Giới thiệu
             </a>
             <a href="/allproducts" className="hover:text-purple-600">
@@ -505,7 +505,7 @@ const Header = () => {
               Khuyến mãi tháng
             </Link>
 
-            <a href="Contacts" className="hover:text-purple-600">
+            <a href="contact" className="hover:text-purple-600">
               Liên hệ
             </a>
           </div>

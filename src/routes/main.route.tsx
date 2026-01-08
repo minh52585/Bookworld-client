@@ -17,6 +17,7 @@ import PromotionsPage from "../pages/PromotionsPage";
 import CategoryPage from "../components/common/CategoryPage";
 import VerifyEmailPage from "../pages/Auth/VerifyEmailPage";
 import ContactInfo from "../pages/ContactPage";
+import AboutPage from "../pages/AboutPage";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -87,8 +88,12 @@ export const router = createBrowserRouter([
         element: <VerifyEmailPage />,
       },
       {
-        path: "contacts",
+        path: "contact",
         element: <ContactInfo />,
+      },
+      {
+        path: "about",
+        element: <AboutPage />,
       },
     ],
   },
