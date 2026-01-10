@@ -19,16 +19,24 @@ import {
 } from "lucide-react";
 import CancelOrderModal from "../../components/modals/CancelOrderModal";
 import { StickyNote } from "lucide-react";
-import { Timeline, Divider, Modal, Select, Upload, Button, Image, Tooltip } from "antd";
+import {
+  Timeline,
+  Divider,
+  Modal,
+  Select,
+  Upload,
+  Button,
+  Image,
+  Tooltip,
+} from "antd";
 import {
   EditOutlined,
   CheckOutlined,
   CloseOutlined,
   TruckOutlined,
   ShoppingOutlined,
-  PlusOutlined
+  PlusOutlined,
 } from "@ant-design/icons";
-
 
 const STATUS_CONFIG: Record<string, { color: string; icon?: React.ReactNode }> =
   {
@@ -103,41 +111,40 @@ function OrderList() {
   };
 
   const submitReturnRequest = async () => {
-  if (!returnOrderId || !returnReason) return;
+    if (!returnOrderId || !returnReason) return;
 
-  try {
-    setSubmittingReturn(true);
-    const token = localStorage.getItem("token");
+    try {
+      setSubmittingReturn(true);
+      const token = localStorage.getItem("token");
 
-    const res = await axios.put(
-      `${API_BASE_URL}/orders/return-request/${returnOrderId}`,
-      {
-        reason: returnReason,
-        images: returnImages,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await axios.put(
+        `${API_BASE_URL}/orders/return-request/${returnOrderId}`,
+        {
+          reason: returnReason,
+          images: returnImages,
         },
-      }
-    );
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    showNotification(res.data.message || "Đã gửi yêu cầu", "success");
+      showNotification(res.data.message || "Đã gửi yêu cầu", "success");
 
-    setReturnModalOpen(false);
-    setReturnReason("");
-    setReturnImages([]);
-    fetchOrders();
-  } catch (error: any) {
-    showNotification(
-      error.response?.data?.message || "Không thể gửi yêu cầu",
-      "error"
-    );
-  } finally {
-    setSubmittingReturn(false);
-  }
-};
-
+      setReturnModalOpen(false);
+      setReturnReason("");
+      setReturnImages([]);
+      fetchOrders();
+    } catch (error: any) {
+      showNotification(
+        error.response?.data?.message || "Không thể gửi yêu cầu",
+        "error"
+      );
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -153,34 +160,40 @@ function OrderList() {
     setLoading(false);
   };
 
-
   const handleRefundToWallet = async (orderId: string) => {
-    if (!window.confirm("Xác nhận hoàn tiền về ví?")) return;
+    Modal.confirm({
+      title: "Xác nhận hoàn tiền",
+      content: "Bạn có chắc chắn muốn hoàn tiền về ví?",
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      okType: "primary",
+      onOk: async () => {
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.post(
+            `${API_BASE_URL}/orders/${orderId}/refund`,
+            {},
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
 
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${API_BASE_URL}/orders/${orderId}/refund`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
+          if (response.data.success) {
+            showNotification(response.data.message, "success");
+            fetchOrders();
+          }
+        } catch (error: any) {
+          const errMsg = error.response?.data?.message || "Không thể hoàn tiền";
+          showNotification(errMsg, "error");
         }
-      );
-
-      if (response.data.success) {
-        showNotification(response.data.message, "success");
-        fetchOrders(); // Reload danh sách
-      }
-    } catch (error: any) {
-      const errMsg = error.response?.data?.message || "Không thể hoàn tiền";
-      showNotification(errMsg, "error");
-    }
+      },
+    });
   };
+
   const handleCloseLoginModal = () => {
     setShowLoginModal(false);
     navigate("/");
   };
-
 
   if (!isAuthenticated) {
     return (
@@ -270,16 +283,14 @@ function OrderList() {
           Thanh toán thất bại
         </span>
       );
-    } 
-    else if (paymentStatus === "Chưa thanh toán") {
+    } else if (paymentStatus === "Chưa thanh toán") {
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-semibold text-sm border border-gray-300">
           <Clock className="w-4 h-4" />
           Chưa thanh toán
         </span>
       );
-    }
-    else {
+    } else {
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-semibold text-sm border border-gray-300">
           <Clock className="w-4 h-4" />
@@ -433,40 +444,41 @@ function OrderList() {
                         )}
 
                         {/* Trả hàng / hoàn tiền */}
-                      {order.status === "Giao hàng thành công" &&
-                        (order.status_logs?.filter(
-                          (log: any) => log.status === "Đang yêu cầu Trả hàng/Hoàn tiền"
-                        ).length || 0) <= 0 && (
-                          <button
-                            className="inline-flex items-center gap-1.5 h-8 px-3 
+                        {order.status === "Giao hàng thành công" &&
+                          (order.status_logs?.filter(
+                            (log: any) =>
+                              log.status === "Đang yêu cầu Trả hàng/Hoàn tiền"
+                          ).length || 0) <= 0 && (
+                            <button
+                              className="inline-flex items-center gap-1.5 h-8 px-3 
                                       text-xs font-medium text-white 
                                       bg-orange-500 hover:bg-orange-600 
                                       rounded-md transition whitespace-nowrap"
-                            onClick={() => {
-                              setReturnOrderId(order._id);
-                              setReturnModalOpen(true);
-                            }}
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            Yêu cầu Trả hàng / Hoàn tiền
-                          </button>
-                      )}
-                          {order.payment?.status === "Chưa thanh toán" &&
-                            order.payment?.payment_url && (
-                              <button
-                                className="inline-flex items-center gap-1.5 h-8 px-3
+                              onClick={() => {
+                                setReturnOrderId(order._id);
+                                setReturnModalOpen(true);
+                              }}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              Yêu cầu Trả hàng / Hoàn tiền
+                            </button>
+                          )}
+                        {order.payment?.status === "Chưa thanh toán" &&
+                          order.payment?.payment_url && (
+                            <button
+                              className="inline-flex items-center gap-1.5 h-8 px-3
                                 text-xs font-medium text-white
                                 bg-green-600 hover:bg-green-700
                                 rounded-md transition whitespace-nowrap"
-                                onClick={() => {
-                                  window.location.href = order.payment.payment_url;
-                                }}
-                              >
-                                <CheckCircle className="w-3.5 h-3.5" />
-                                Thanh toán
-                              </button>
+                              onClick={() => {
+                                window.location.href =
+                                  order.payment.payment_url;
+                              }}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              Thanh toán
+                            </button>
                           )}
-
                       </div>
                     </td>
                   </tr>
@@ -633,7 +645,7 @@ function OrderList() {
                           <div className="flex items-center gap-2 text-green-700">
                             <CheckCircle className="w-5 h-5" />
                             <span className="font-semibold">
-                              ✅ Đã hoàn tiền về ví
+                              Đã hoàn tiền về ví
                             </span>
                           </div>
                           {selectedOrder.refunded_at && (
@@ -754,7 +766,7 @@ function OrderList() {
                   Đóng
                 </button>
               </div>
-            
+
               <Divider orientation="left">
                 Lịch sử thay đổi trạng thái đơn hàng
               </Divider>
@@ -781,29 +793,30 @@ function OrderList() {
                 />
               </div>
 
-            <Divider orientation="left">
-                Hình ảnh sản phẩm thực
-            </Divider>
-            {selectedOrder.images_return && selectedOrder.images_return.length > 0 && (
-              <div style={{ marginTop: 8, marginLeft: 100 }}>
-                <Image.PreviewGroup>
-                  {selectedOrder.images_return.map((img: string, index: number) => (
-                    <Image
-                      key={index}
-                      src={img}
-                      width={80}  
-                      height={80}
-                      style={{
-                        objectFit: "cover",
-                        borderRadius: 6,
-                        marginRight: 8,
-                        cursor: "pointer",
-                      }}
-                    />
-                  ))}
-                </Image.PreviewGroup>
-              </div>
-            )}
+              <Divider orientation="left">Hình ảnh sản phẩm thực</Divider>
+              {selectedOrder.images_return &&
+                selectedOrder.images_return.length > 0 && (
+                  <div style={{ marginTop: 8, marginLeft: 100 }}>
+                    <Image.PreviewGroup>
+                      {selectedOrder.images_return.map(
+                        (img: string, index: number) => (
+                          <Image
+                            key={index}
+                            src={img}
+                            width={80}
+                            height={80}
+                            style={{
+                              objectFit: "cover",
+                              borderRadius: 6,
+                              marginRight: 8,
+                              cursor: "pointer",
+                            }}
+                          />
+                        )
+                      )}
+                    </Image.PreviewGroup>
+                  </div>
+                )}
             </div>
           </div>
         )}
@@ -852,7 +865,7 @@ function OrderList() {
           }
         }}
       />
-        <Modal
+      <Modal
         title="Yêu cầu Trả hàng / Hoàn tiền"
         open={returnModalOpen}
         onCancel={() => {
@@ -888,21 +901,20 @@ function OrderList() {
           <Upload
             listType="picture-card"
             maxCount={3}
-           beforeUpload={async (file) => {
-            try {
-              const url = await uploadImage(file);
-              setReturnImages((prev) => [...prev, url]);
-            } catch {
-              showNotification("Upload ảnh thất bại", "error");
-            }
-            return false;
-          }}
-
+            beforeUpload={async (file) => {
+              try {
+                const url = await uploadImage(file);
+                setReturnImages((prev) => [...prev, url]);
+              } catch {
+                showNotification("Upload ảnh thất bại", "error");
+              }
+              return false;
+            }}
             onRemove={(file) => {
-            setReturnImages((prev) =>
-              prev.filter((_, idx) => String(idx) !== file.uid)
-            );
-          }}
+              setReturnImages((prev) =>
+                prev.filter((_, idx) => String(idx) !== file.uid)
+              );
+            }}
             fileList={returnImages.map((url, idx) => ({
               uid: String(idx),
               name: `image-${idx}`,
@@ -931,11 +943,7 @@ function OrderList() {
           Gửi yêu cầu
         </Button>
       </Modal>
-
-      
     </div>
-
-    
   );
 }
 
