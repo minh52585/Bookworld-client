@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  User,
 } from "lucide-react";
 
 // ============= TYPES =============
@@ -44,6 +45,7 @@ interface Product {
 interface Filters {
   search: string;
   categories: string[];
+  authors: string[];
   minPrice: number;
   maxPrice: number;
   rating: number | null;
@@ -66,6 +68,7 @@ const AllProducts: React.FC = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [authors, setAuthors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -75,6 +78,7 @@ const AllProducts: React.FC = () => {
   const [filters, setFilters] = useState<Filters>({
     search: "",
     categories: [],
+    authors: [],
     minPrice: 0,
     maxPrice: 1000000,
     rating: null,
@@ -86,7 +90,6 @@ const AllProducts: React.FC = () => {
     const fetchCategories = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/categories?status=active`);
-
         const data = await res.json();
 
         if (data?.data?.items && Array.isArray(data.data.items)) {
@@ -101,6 +104,27 @@ const AllProducts: React.FC = () => {
     };
 
     fetchCategories();
+  }, []);
+
+  // Fetch authors
+  useEffect(() => {
+    const fetchAuthors = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/products/authors`);
+        const data = await res.json();
+
+        if (data?.data && Array.isArray(data.data)) {
+          setAuthors(data.data);
+        } else {
+          setAuthors([]);
+        }
+      } catch (error) {
+        console.error("Error fetching authors:", error);
+        setAuthors([]);
+      }
+    };
+
+    fetchAuthors();
   }, []);
 
   // Fetch products with filters
@@ -120,6 +144,8 @@ const AllProducts: React.FC = () => {
         if (filters.search) params.append("search", filters.search);
         if (filters.categories.length > 0)
           params.append("category", filters.categories[0]);
+        if (filters.authors.length > 0)
+          params.append("author", filters.authors[0]);
         if (filters.sortBy) params.append("sort", filters.sortBy);
         if (filters.rating)
           params.append("minRating", filters.rating.toString());
@@ -130,7 +156,7 @@ const AllProducts: React.FC = () => {
 
         const response = await fetch(
           `${API_BASE_URL}/products?${params.toString()}`,
-          { signal: controller.signal } // Thêm signal để có thể cancel
+          { signal: controller.signal }
         );
         const data: ApiResponse = await response.json();
 
@@ -144,7 +170,6 @@ const AllProducts: React.FC = () => {
           return;
         }
 
-        // Loại bỏ duplicate
         const uniqueProducts = Array.from(
           new Map(data.data.items.map((item) => [item._id, item])).values()
         );
@@ -154,7 +179,6 @@ const AllProducts: React.FC = () => {
           setTotal(data.data.total);
         }
       } catch (error: any) {
-        // Bỏ qua lỗi abort (khi component unmount)
         if (error.name === "AbortError") {
           console.log("🚫 Fetch aborted");
           return;
@@ -175,20 +199,32 @@ const AllProducts: React.FC = () => {
 
     return () => {
       isMounted = false;
-      controller.abort(); // Cancel request khi unmount
+      controller.abort();
     };
   }, [page, limit, filters]);
+
   const handleProductClick = (id: string) => {
     if (!id) return;
     navigate(`/products/${id}`);
     window.scrollTo(0, 0);
   };
+
   const handleCategoryToggle = (categoryId: string) => {
     setFilters((prev) => ({
       ...prev,
       categories: prev.categories.includes(categoryId)
         ? prev.categories.filter((id) => id !== categoryId)
         : [categoryId],
+    }));
+    setPage(1);
+  };
+
+  const handleAuthorToggle = (author: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      authors: prev.authors.includes(author)
+        ? prev.authors.filter((a) => a !== author)
+        : [author],
     }));
     setPage(1);
   };
@@ -205,6 +241,7 @@ const AllProducts: React.FC = () => {
     setFilters({
       search: "",
       categories: [],
+      authors: [],
       minPrice: 0,
       maxPrice: 1000000,
       rating: null,
@@ -325,6 +362,34 @@ const AllProducts: React.FC = () => {
                 )}
               </div>
 
+              {/* Authors */}
+              <div className="mb-6 pb-6 border-b border-gray-200">
+                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Tác giả
+                </h3>
+                {authors.length === 0 ? (
+                  <p className="text-sm text-gray-500">Không có tác giả</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {authors.map((author) => (
+                      <label
+                        key={author}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filters.authors.includes(author)}
+                          onChange={() => handleAuthorToggle(author)}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">{author}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Rating */}
               <div className="mb-6 pb-6 border-b border-gray-200">
                 <h3 className="font-medium text-gray-900 mb-3">Đánh giá</h3>
@@ -423,7 +488,7 @@ const AllProducts: React.FC = () => {
             {loading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">
-                  <Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-2" />
+                  <Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-2 animate-spin" />
                   <p className="text-gray-600">Đang tải sản phẩm...</p>
                 </div>
               </div>

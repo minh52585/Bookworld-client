@@ -300,58 +300,6 @@ const Header = () => {
             <span className="text-gray-400">Chúng tôi yêu sách</span>
           </div>
 
-          {/* search */}
-          <form className="relative w-64" onSubmit={handleSearchSubmit}>
-            <input
-              type="text"
-              placeholder="Tìm kiếm sách..."
-              value={searchText}
-              onChange={(e) => fetchSearch(e.target.value)}
-              onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
-              className="rounded-md text-sm w-full outline-none focus:ring-2
-                focus:ring-purple-300 pr-10 bg-white border border-gray-300 py-2 px-3"
-            />
-
-            <div className="absolute right-2 top-1/2 -translate-y-1/2">
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-gray-300 border-t-purple-600 animate-spin rounded-full"></div>
-              ) : (
-                <i className="fas fa-search text-gray-600"></i>
-              )}
-            </div>
-            {showDropdown && (
-              <div className="absolute top-full left-0 w-full bg-white border rounded shadow-lg z-50 mt-2 max-h-72 overflow-y-auto">
-                {searchResults.length > 0 ? (
-                  searchResults.map((item) => (
-                    <div
-                      key={item._id}
-                      className="p-2 hover:bg-purple-100 cursor-pointer flex gap-2"
-                      onClick={() => {
-                        nav(`/products/${item._id}`);
-                        setShowDropdown(false);
-                      }}
-                    >
-                      <img
-                        src={item.image || "/no-image.png"}
-                        className="w-12 h-12 rounded object-cover"
-                      />
-                      <div>
-                        <p className="font-medium text-sm">{item.title}</p>
-                        <p className="text-red-600 font-semibold text-sm">
-                          {item.price}₫
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-3 text-gray-500 text-sm">
-                    Không tìm thấy sản phẩm
-                  </div>
-                )}
-              </div>
-            )}
-          </form>
-
           {/* right menu */}
           <div className="flex items-center space-x-6 text-gray-600 relative">
             <a href="#" className="hover:text-purple-600">
