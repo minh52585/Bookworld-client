@@ -747,12 +747,7 @@ function OrderList() {
                   </div>
                 </div>
 
-                <button
-                  className="w-full mt-6 bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition"
-                  onClick={() => setSelectedOrder(null)}
-                >
-                  Đóng
-                </button>
+                
               </div>
             
               <Divider orientation="left">
@@ -781,11 +776,12 @@ function OrderList() {
                 />
               </div>
 
-            <Divider orientation="left">
-                Hình ảnh sản phẩm thực
-            </Divider>
+            
             {selectedOrder.images_return && selectedOrder.images_return.length > 0 && (
               <div style={{ marginTop: 8, marginLeft: 100 }}>
+                <Divider orientation="left">
+                Hình ảnh sản phẩm thực
+                </Divider>
                 <Image.PreviewGroup>
                   {selectedOrder.images_return.map((img: string, index: number) => (
                     <Image
@@ -804,6 +800,13 @@ function OrderList() {
                 </Image.PreviewGroup>
               </div>
             )}
+
+            <button
+                  className="w-full mb-50 mt-6 bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition"
+                  onClick={() => setSelectedOrder(null)}
+                >
+                  Đóng
+            </button>
             </div>
           </div>
         )}
@@ -844,11 +847,14 @@ function OrderList() {
 
             setShowCancelModal(false);
             setCancelOrderId(null);
-            fetchOrders();
+
           } catch (error: any) {
             const errMsg =
               error.response?.data?.message || "Không thể hủy đơn hàng";
             showNotification(errMsg, "error");
+          }
+          finally {
+            fetchOrders();
           }
         }}
       />

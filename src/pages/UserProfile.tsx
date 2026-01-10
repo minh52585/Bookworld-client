@@ -24,6 +24,8 @@ const UserProfile: React.FC = () => {
   const [bankCards, setBankCards] = useState<any[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string>("");
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
   const [cardForm, setCardForm] = useState({
     bankName: "Vietcombank",
     accountNumber: "",
@@ -900,6 +902,10 @@ const UserProfile: React.FC = () => {
                               Số tiền
                             </th>
                             <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                              <i className="fas fa-image mr-2"></i>
+                              Ảnh giao dịch
+                            </th>
+                            <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
                               <i className="fas fa-info-circle mr-2"></i>
                               Trạng thái
                             </th>
@@ -990,6 +996,19 @@ const UserProfile: React.FC = () => {
                                   </div>
                                 </td>
 
+                                {/* Ảnh */}
+                                <td className="px-6 py-4 text-center">
+                                  {t.status === "Thành công" && t.image_transaction ? (
+                                   <img
+                                    src={t.image_transaction}
+                                    alt="Ảnh giao dịch"
+                                    className="w-12 h-12 object-cover rounded cursor-pointer mx-auto border hover:scale-105 transition"
+                                    onClick={() => setPreviewImage(t.image_transaction)}
+                                  />
+                                  ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                  )}
+                                </td>
                                 {/* Trạng thái */}
                                 <td className="px-6 py-4 whitespace-nowrap text-center">
                                   <span
@@ -1749,6 +1768,56 @@ const UserProfile: React.FC = () => {
           </div>
         </div>
       )}
+      {previewImage && (
+  <div
+    className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+    onClick={() => setPreviewImage(null)}
+  >
+    <div
+      className="relative bg-white rounded-xl max-w-3xl w-full p-4 shadow-xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Close button */}
+      <button
+        onClick={() => setPreviewImage(null)}
+        className="absolute top-3 right-3 text-gray-500 hover:text-red-500"
+      >
+        <i className="fas fa-times text-xl"></i>
+      </button>
+
+      {/* Image */}
+      <div className="flex items-center justify-center">
+        <img
+          src={previewImage}
+          alt="Ảnh giao dịch"
+          className="max-h-[75vh] w-auto object-contain rounded-lg"
+        />
+      </div>
+
+      {/* Actions */}
+      <div className="mt-4 flex justify-end gap-3">
+        <a
+          href={previewImage}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200"
+        >
+          <i className="fas fa-external-link-alt mr-1"></i>
+          Mở tab mới
+        </a>
+
+        <a
+          href={previewImage}
+          download
+          className="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+        >
+          <i className="fas fa-download mr-1"></i>
+          Tải ảnh
+        </a>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Font Awesome CDN */}
       <link

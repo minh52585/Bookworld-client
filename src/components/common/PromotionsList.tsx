@@ -151,10 +151,11 @@ const rawExpire = get([
             <div className="flex items-start justify-between">
               <div>
                 <div className="text-sm text-purple-600 font-semibold tracking-wide">
-                  {p.code}
+                  MÃ: {p.code}
                 </div>
                 <div className="text-sm text-gray-500 mt-1">
-                  {p.type === 'percent' ? `${p.value}%` : `${(p.value || 0).toLocaleString()}đ`}
+                  Giảm ngay: {p.type === 'percent' ? `${p.value}%` : `${(p.value || 0).toLocaleString()}đ`} cho đơn tối thiểu <b>{p.minOrderValue? `${p.minOrderValue.toLocaleString()}đ`: 'Không yêu cầu'}
+                  </b>
                 </div>
                 {(() => {
                   const expired = isUnavailable(p);
@@ -166,6 +167,24 @@ const rawExpire = get([
                   );
                 })()}
               </div>
+
+              <div className="mt-2 text-xs text-gray-600 space-y-1">
+                {p.usageLimit && (
+                  <div className="mt-2">
+                    <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-purple-500"
+                        style={{
+                          width: `${Math.min(
+                            ((p.usedCount || 0) / p.usageLimit) * 100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+                  </div>
 
               <div className="flex-shrink-0 flex flex-col gap-2 items-end">
                 {(() => {

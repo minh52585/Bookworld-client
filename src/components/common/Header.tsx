@@ -45,7 +45,7 @@ const Header = () => {
         const cartItems = res.data?.data?.items || [];
 
         const totalCount = cartItems.reduce((sum: number, item: any) => {
-          const qty = parseInt(item.quantity) || 1;
+          const qty = parseInt(item) || 1;
           return sum + qty;
         }, 0);
 
