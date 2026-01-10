@@ -104,10 +104,25 @@ const BookDetailPage: React.FC = () => {
     err?.response?.data?.error ||
     err?.response?.data?.msg ||
     "Có lỗi xảy ra, vui lòng thử lại";
-
+  const [reviewStats, setReviewStats] = useState<{
+    canReview: boolean;
+    totalOrders?: number;
+    reviewedOrders?: number;
+    remainingReviews?: number;
+    reason?: string;
+  } | null>(null);
   // Fetch main product
   useEffect(() => {
     const fetchProduct = async () => {
+      setUserReview(null);
+      setShowReviewForm(false);
+      setReviewComment("");
+      setReviewRating(5);
+      setReviewImages([]);
+      setReviewError("");
+      setIsEditingReview(false);
+      setCanReview(false);
+
       try {
         const res = await axios.get(`${API_BASE_URL}/products/${id}`);
         const productData = res.data.data.product;
@@ -544,6 +559,15 @@ const BookDetailPage: React.FC = () => {
     }
   };
 
+  const canEditReview = (review: Review) => {
+    const createdDate = new Date(review.createdAt);
+    const currentDate = new Date();
+    const daysDiff = Math.floor(
+      (currentDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return daysDiff >= 7;
+  };
+
   // Review handlers
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -682,14 +706,14 @@ const BookDetailPage: React.FC = () => {
 
   const handlePreviousImage = () => {
     const images = getProductImages(product);
-    setSelectedImageIndex((prev) => 
+    setSelectedImageIndex((prev) =>
       prev === 0 ? images.length - 1 : prev - 1
     );
   };
 
   const handleNextImage = () => {
     const images = getProductImages(product);
-    setSelectedImageIndex((prev) => 
+    setSelectedImageIndex((prev) =>
       prev === images.length - 1 ? 0 : prev + 1
     );
   };
@@ -754,7 +778,7 @@ const BookDetailPage: React.FC = () => {
                     'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="600"%3E%3Crect width="400" height="600" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
                 }}
               />
-              
+
               {/* Navigation Arrows */}
               {getProductImages(product).length > 1 && (
                 <>
@@ -770,15 +794,16 @@ const BookDetailPage: React.FC = () => {
                   >
                     <i className="fas fa-chevron-right"></i>
                   </button>
-                  
+
                   {/* Image Counter */}
                   <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-                    {selectedImageIndex + 1} / {getProductImages(product).length}
+                    {selectedImageIndex + 1} /{" "}
+                    {getProductImages(product).length}
                   </div>
                 </>
               )}
             </div>
-            
+
             {/* Thumbnail Images */}
             {getProductImages(product).length > 1 && (
               <div className="flex gap-2 mt-4 overflow-x-auto">
@@ -1051,12 +1076,18 @@ const BookDetailPage: React.FC = () => {
               <p className="text-green-700 mb-3">
                 Bạn đã đánh giá sản phẩm này
               </p>
-              <button
-                onClick={handleEditReview}
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
-              >
-                Chỉnh sửa
-              </button>
+              {canEditReview(userReview) ? (
+                <button
+                  onClick={handleEditReview}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
+                >
+                  Chỉnh sửa
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500 italic">
+                  Chỉ có thể chỉnh sửa sau 7 ngày kể từ khi đánh giá
+                </p>
+              )}
             </div>
           )}
           {showReviewForm && (
