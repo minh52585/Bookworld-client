@@ -788,64 +788,12 @@ function OrderList() {
                 />
               </div>
 
-<<<<<<< HEAD
-            
-            {selectedOrder.images_return && selectedOrder.images_return.length > 0 && (
-              <div style={{ marginTop: 8, marginLeft: 100 }}>
-                <Divider orientation="left">
-                Hình ảnh sản phẩm thực
-                </Divider>
-                <Image.PreviewGroup>
-                  {selectedOrder.images_return.map((img: string, index: number) => (
-                    <Image
-                      key={index}
-                      src={img}
-                      width={80}  
-                      height={80}
-                      style={{
-                        objectFit: "cover",
-                        borderRadius: 6,
-                        marginRight: 8,
-                        cursor: "pointer",
-                      }}
-                    />
-                  ))}
-                </Image.PreviewGroup>
-              </div>
-            )}
-
-            <button
+                <button
                   className="w-full mb-50 mt-6 bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition"
                   onClick={() => setSelectedOrder(null)}
                 >
                   Đóng
             </button>
-=======
-              <Divider orientation="left">Hình ảnh sản phẩm thực</Divider>
-              {selectedOrder.images_return &&
-                selectedOrder.images_return.length > 0 && (
-                  <div style={{ marginTop: 8, marginLeft: 100 }}>
-                    <Image.PreviewGroup>
-                      {selectedOrder.images_return.map(
-                        (img: string, index: number) => (
-                          <Image
-                            key={index}
-                            src={img}
-                            width={80}
-                            height={80}
-                            style={{
-                              objectFit: "cover",
-                              borderRadius: 6,
-                              marginRight: 8,
-                              cursor: "pointer",
-                            }}
-                          />
-                        )
-                      )}
-                    </Image.PreviewGroup>
-                  </div>
-                )}
->>>>>>> 7d02a94785d4aaecc05c331add5da80de15c17da
             </div>
           </div>
         )}
