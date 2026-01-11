@@ -7,7 +7,16 @@ import axios from "axios";
 import { API_BASE_URL } from "../../configs/api";
 import { useLocation } from "react-router-dom";
 import { showNotification } from "../../utils/notification";
-
+const getErrorMessage = (error: any) => {
+  const data = error.response?.data;
+  return (
+    data?.message ||
+    data?.error ||
+    data?.msg ||
+    (typeof data === "string" ? data : null) ||
+    "Có lỗi xảy ra. Vui lòng thử lại!"
+  );
+};
 function Thanhtoan() {
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -479,28 +488,16 @@ function Thanhtoan() {
         );
       }
     } catch (error: any) {
-      console.error("❌ Chi tiết lỗi Wallet:", error);
+  console.error("❌ Wallet error:", error);
 
-      let errorMsg = "Thanh toán ví thất bại. Vui lòng thử lại!";
-
-      if (
-        error.code === "ERR_NETWORK" ||
-        error.message.includes("Network Error")
-      ) {
-        errorMsg =
-          "Không thể kết nối đến server. Vui lòng kiểm tra backend đã chạy chưa.";
-      } else if (error.response?.status === 401) {
-        errorMsg = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else if (error.response?.data?.message) {
-        errorMsg = error.response.data.message;
-      }
-
-      showNotification(errorMsg, "error");
-    } finally {
-      setLoading(false);
-    }
+  showNotification(
+    error.response?.data?.message ||
+      "Thanh toán ví thất bại. Vui lòng thử lại!",
+    "error"
+  );
+} finally {
+  setLoading(false);
+}
   };
 
   const handleSubmitOrderVNPay = async () => {
