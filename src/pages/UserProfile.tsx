@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../configs/api";
 import { showNotification } from "../utils/notification";
-
+import { Modal, Descriptions } from "antd";
 const UserProfile: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
@@ -25,7 +25,11 @@ const UserProfile: React.FC = () => {
   const [loadingCards, setLoadingCards] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string>("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-
+  const [previewWithdrawInfo, setPreviewWithdrawInfo] = useState<null | {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  }>(null);
   const [cardForm, setCardForm] = useState({
     bankName: "Vietcombank",
     accountNumber: "",
@@ -903,7 +907,15 @@ const UserProfile: React.FC = () => {
                             </th>
                             <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
                               <i className="fas fa-image mr-2"></i>
+                              Thông tin thẻ rút
+                            </th>
+                            <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                              <i className="fas fa-image mr-2"></i>
                               Ảnh giao dịch
+                            </th>
+                            <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                              <i className="fas fa-image mr-2"></i>
+                              Ghi chú
                             </th>
                             <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
                               <i className="fas fa-info-circle mr-2"></i>
@@ -996,6 +1008,63 @@ const UserProfile: React.FC = () => {
                                   </div>
                                 </td>
 
+                                <td className="px-6 py-4 text-center">
+                                  {t.type === "Rút tiền" && t.withdrawalMethod ? (
+                                    <button
+                                        onClick={() =>
+                                          setPreviewWithdrawInfo({
+                                            bankName: t.withdrawalMethod.bankName,
+                                            accountNumber: t.withdrawalMethod.accountNumber,
+                                            accountName: t.withdrawalMethod.accountName,
+                                          })
+                                        }
+                                        className="text-indigo-600 hover:text-indigo-800 transition"
+                                        title="Xem thông tin rút tiền"
+                                      >
+                                        <i className="fas fa-credit-card text-lg"></i>
+                                      </button>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                  )}
+                                </td>
+                  <Modal
+  open={!!previewWithdrawInfo}
+  onCancel={() => setPreviewWithdrawInfo(null)}
+  footer={null}
+  centered
+  width={420}
+  mask={false}
+  title={
+    <div className="flex items-center gap-2">
+      <i className="fas fa-credit-card text-indigo-600"></i>
+      <span className="font-semibold">Thông tin rút tiền</span>
+    </div>
+  }
+>
+  {previewWithdrawInfo && (
+    <Descriptions
+      column={1}
+      size="small"
+      bordered
+      labelStyle={{ width: 140 }}
+    >
+      <Descriptions.Item label="Ngân hàng">
+        {previewWithdrawInfo.bankName}
+      </Descriptions.Item>
+
+      <Descriptions.Item label="Số tài khoản">
+        <span className="font-mono font-semibold">
+          {previewWithdrawInfo.accountNumber}
+        </span>
+      </Descriptions.Item>
+
+      <Descriptions.Item label="Chủ tài khoản">
+        {previewWithdrawInfo.accountName}
+      </Descriptions.Item>
+    </Descriptions>
+  )}
+</Modal>
+
                                 {/* Ảnh */}
                                 <td className="px-6 py-4 text-center">
                                   {t.status === "Thành công" && t.image_transaction ? (
@@ -1005,6 +1074,14 @@ const UserProfile: React.FC = () => {
                                     className="w-12 h-12 object-cover rounded cursor-pointer mx-auto border hover:scale-105 transition"
                                     onClick={() => setPreviewImage(t.image_transaction)}
                                   />
+                                  ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                  )}
+                                </td>
+
+                                <td className="px-6 py-4 text-center">
+                                  {t.note ?  (
+                                   <span className="text-xs">{t.note}</span>
                                   ) : (
                                     <span className="text-xs text-gray-400">—</span>
                                   )}

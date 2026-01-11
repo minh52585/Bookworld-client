@@ -47,6 +47,16 @@ const STATUS_CONFIG: Record<string, { color: string; icon?: React.ReactNode }> =
     "Giao hàng không thành công": { color: "red", icon: <CloseOutlined /> },
     "Giao hàng thành công": { color: "green", icon: <CheckOutlined /> },
   };
+
+const ORDER_TYPES_OPTIONS = [
+  { label: 'Tất cả', value: 'all' },
+  { label: 'Đã hủy', value: 'Đã hủy' },
+  { label: 'Chờ xử lý', value: 'Chờ xử lý' },
+  { label: 'Giao hàng không thành công', value: '"Giao hàng không thành công' },
+  { label: 'Giao hàng thành công', value: 'Giao hàng thành công' },
+  { label: 'Đang yêu cầu Trả hàng/Hoàn tiền', value: 'Đang yêu cầu Trả hàng/Hoàn tiền' },
+  { label: 'Trả hàng/Hoàn tiền thành công', value: 'Trả hàng/Hoàn tiền thành công' }
+];
 function OrderList() {
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -61,7 +71,13 @@ function OrderList() {
   const [returnReason, setReturnReason] = useState("");
   const [returnImages, setReturnImages] = useState<string[]>([]);
   const [submittingReturn, setSubmittingReturn] = useState(false);
+  const [selectedOrderType, setSelectedOrderType] =  useState<string>('all');
+
   const navigate = useNavigate();
+  const filteredOrders = orders.filter((item) => {
+  if (selectedOrderType === 'all') return true;
+  return item.status === selectedOrderType;
+});
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -321,6 +337,14 @@ function OrderList() {
           <Package className="w-8 h-8 text-purple-600" />
           <h1 className="text-3xl font-bold text-gray-800">Đơn hàng của tôi</h1>
         </div>
+         <Select
+                value={selectedOrderType}
+                placeholder="-- Chọn trạng thái --"
+                allowClear
+                style={{ width: 220 }}
+                onChange={(value) => setSelectedOrderType(value || "all")}
+                options={ORDER_TYPES_OPTIONS}
+          />
 
         {loading ? (
           <div className="flex justify-center items-center min-h-[400px]">
@@ -362,7 +386,7 @@ function OrderList() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       #{order._id.slice(-8)}
