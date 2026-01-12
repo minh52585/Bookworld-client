@@ -326,6 +326,20 @@ function Cart() {
     );
   };
 
+  const toggleSelectAll = () => {
+    const allKeys = cartItems
+      .filter((item) => item.product_id)
+      .map((item) => item.product_id._id + (item.variant_id?._id || ""));
+    
+    if (selectedItems.length === allKeys.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(allKeys);
+    }
+  };
+
+  const isAllSelected = cartItems.length > 0 && selectedItems.length === cartItems.filter((item) => item.product_id).length;
+
   // Reset discounts when cart contents or selection changes
   useEffect(() => {
     setDiscountAmount(0);
@@ -539,7 +553,7 @@ function Cart() {
                 </h2>
 
                 {/* Apply coupon */}
-                <div className="mb-4">
+                {/* <div className="mb-4">
                   <label className="text-sm text-gray-600">Mã giảm giá</label>
                   <div className="flex gap-2 mt-2">
                     <input
@@ -590,7 +604,7 @@ function Cart() {
                       </p>
                     </div>
                   )}
-                </div>
+                </div> */}
                 <div className="flex justify-between text-gray-700 mb-4">
                   <span>Tổng sản phẩm đã chọn</span>
                   <span>{(subtotal - discountAmount).toLocaleString()} đ</span>
