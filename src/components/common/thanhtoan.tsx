@@ -488,16 +488,16 @@ function Thanhtoan() {
         );
       }
     } catch (error: any) {
-  console.error("❌ Wallet error:", error);
+      console.error("❌ Wallet error:", error);
 
-  showNotification(
-    error.response?.data?.message ||
-      "Thanh toán ví thất bại. Vui lòng thử lại!",
-    "error"
-  );
-} finally {
-  setLoading(false);
-}
+      showNotification(
+        error.response?.data?.message ||
+          "Thanh toán ví thất bại. Vui lòng thử lại!",
+        "error"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmitOrderVNPay = async () => {
