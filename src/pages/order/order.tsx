@@ -641,48 +641,8 @@ function OrderList() {
                       </div>
                     )}
 
-                    {/* NÚT HOÀN TIỀN */}
-                    {selectedOrder.status === "Đã hủy" &&
-                      selectedOrder.payment.status === "Đã thanh toán" &&
-                      selectedOrder.payment.method !== "cod" &&
-                      !selectedOrder.payment.refunded && (
-                        <div className="md:col-span-2 mt-4">
-                          <button
-                            onClick={() =>
-                              handleRefundToWallet(selectedOrder._id)
-                            }
-                            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 
-                 hover:from-green-600 hover:to-emerald-700 
-                 text-white px-6 py-3 rounded-lg font-semibold 
-                 shadow-md transition flex items-center justify-center gap-2"
-                          >
-                            <CheckCircle className="w-5 h-5" />
-                            Nhận hoàn tiền về ví
-                          </button>
-                        </div>
-                      )}
-
-                    {/* TRẠNG THÁI ĐÃ HOÀN TIỀN */}
-                    {selectedOrder.payment.refunded && (
-                      <div className="md:col-span-2 mt-4">
-                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                          <div className="flex items-center gap-2 text-green-700">
-                            <CheckCircle className="w-5 h-5" />
-                            <span className="font-semibold">
-                              Đã hoàn tiền về ví
-                            </span>
-                          </div>
-                          {selectedOrder.refunded_at && (
-                            <p className="text-sm text-gray-600 mt-2">
-                              Thời gian:{" "}
-                              {new Date(
-                                selectedOrder.refunded_at
-                              ).toLocaleString("vi-VN")}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
+              
+                   
                   </div>
                 </div>
 
@@ -803,6 +763,20 @@ function OrderList() {
                         <strong style={{ display: "block" }}>
                           {log.status}
                         </strong>
+                         {log.status === "Giao hàng thành công" &&
+                          selectedOrder.status === "Giao hàng thành công" &&
+                          selectedOrder.image_completed && (
+                            <div style={{ marginTop: 8 }}>
+                              <small style={{ color: "#888" }}>Ảnh giao hàng:</small>
+                              <br />
+                              <Image
+                                src={selectedOrder.image_completed}
+                                width={120}
+                                style={{ marginTop: 4, borderRadius: 6 }}
+                                preview
+                              />
+                            </div>
+                          )}
                         <small style={{ color: "#888" }}>
                           {new Date(log.createdAt).toLocaleString("vi-VN")}
                         </small>
