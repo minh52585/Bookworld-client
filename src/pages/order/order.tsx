@@ -763,8 +763,9 @@ function OrderList() {
                         <strong style={{ display: "block" }}>
                           {log.status}
                         </strong>
+                         {log.note && <div>{log.note}</div>}
                          {log.status === "Giao hàng thành công" &&
-                          selectedOrder.status === "Giao hàng thành công" &&
+                       
                           selectedOrder.image_completed && (
                             <div style={{ marginTop: 8 }}>
                               <small style={{ color: "#888" }}>Ảnh giao hàng:</small>

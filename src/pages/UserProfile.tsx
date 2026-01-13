@@ -43,6 +43,8 @@ const UserProfile: React.FC = () => {
     phone: "",
     address: "",
     avatar: "",
+    createdAt: "",
+    status: ""
   });
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [loadingUpdate, setLoadingUpdate] = useState(false);
@@ -91,6 +93,8 @@ const UserProfile: React.FC = () => {
         phone: data.phone || "",
         address: data.address || "",
         avatar: data.avatar || "",
+        createdAt: data.createdAt || "",
+        status: data.status || ""
       });
     } catch (error) {
       console.error("Lỗi lấy thông tin:", error);
@@ -557,11 +561,27 @@ const UserProfile: React.FC = () => {
                   >
                     {user.role === "admin" ? "Quản trị viên" : "Thành viên"}
                   </span>
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1 ${
+                      profileForm.status === "active"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    <i
+                      className={`fas ${
+                        profileForm.status === "active" ? "fa-wallet" : "fa-lock"
+                      }`}
+                    ></i>
+                    {profileForm.status === "active" ? "Mở" : "Bị khóa"}
+                  </span>
+
+                  {/* Ngày tham gia */}
                   <span className="text-gray-500 text-sm">
                     <i className="far fa-calendar mr-1"></i>
                     Tham gia:{" "}
-                    {user.createdAt
-                      ? new Date(user.createdAt).toLocaleDateString("vi-VN")
+                    {profileForm.createdAt
+                      ? new Date(profileForm.createdAt).toLocaleDateString("vi-VN")
                       : "N/A"}
                   </span>
                 </div>
@@ -982,7 +1002,7 @@ const UserProfile: React.FC = () => {
                                         {typeInfo.label}
                                       </div>
                                       <div className="text-xs text-gray-500">
-                                        ID: {t._id.slice(-8)}
+                                        Mã giao dịch: {t._id.slice(-8)}
                                       </div>
                                     </div>
                                   </div>
@@ -1027,43 +1047,43 @@ const UserProfile: React.FC = () => {
                                     <span className="text-xs text-gray-400">—</span>
                                   )}
                                 </td>
-                  <Modal
-  open={!!previewWithdrawInfo}
-  onCancel={() => setPreviewWithdrawInfo(null)}
-  footer={null}
-  centered
-  width={420}
-  mask={false}
-  title={
-    <div className="flex items-center gap-2">
-      <i className="fas fa-credit-card text-indigo-600"></i>
-      <span className="font-semibold">Thông tin rút tiền</span>
-    </div>
-  }
->
-  {previewWithdrawInfo && (
-    <Descriptions
-      column={1}
-      size="small"
-      bordered
-      labelStyle={{ width: 140 }}
-    >
-      <Descriptions.Item label="Ngân hàng">
-        {previewWithdrawInfo.bankName}
-      </Descriptions.Item>
+                            <Modal
+                            open={!!previewWithdrawInfo}
+                            onCancel={() => setPreviewWithdrawInfo(null)}
+                            footer={null}
+                            centered
+                            width={420}
+                            mask={false}
+                            title={
+                              <div className="flex items-center gap-2">
+                                <i className="fas fa-credit-card text-indigo-600"></i>
+                                <span className="font-semibold">Thông tin rút tiền</span>
+                              </div>
+                            }
+                          >
+                            {previewWithdrawInfo && (
+                              <Descriptions
+                                column={1}
+                                size="small"
+                                bordered
+                                labelStyle={{ width: 140 }}
+                              >
+                                <Descriptions.Item label="Ngân hàng">
+                                  {previewWithdrawInfo.bankName}
+                                </Descriptions.Item>
 
-      <Descriptions.Item label="Số tài khoản">
-        <span className="font-mono font-semibold">
-          {previewWithdrawInfo.accountNumber}
-        </span>
-      </Descriptions.Item>
+                                <Descriptions.Item label="Số tài khoản">
+                                  <span className="font-mono font-semibold">
+                                    {previewWithdrawInfo.accountNumber}
+                                  </span>
+                                </Descriptions.Item>
 
-      <Descriptions.Item label="Chủ tài khoản">
-        {previewWithdrawInfo.accountName}
-      </Descriptions.Item>
-    </Descriptions>
-  )}
-</Modal>
+                                <Descriptions.Item label="Chủ tài khoản">
+                                  {previewWithdrawInfo.accountName}
+                                </Descriptions.Item>
+                              </Descriptions>
+                            )}
+                          </Modal>
 
                                 {/* Ảnh */}
                                 <td className="px-6 py-4 text-center">
