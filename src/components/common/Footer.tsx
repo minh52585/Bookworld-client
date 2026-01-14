@@ -133,8 +133,7 @@ const Footer = () => {
             <h3 className="font-bold mb-4">Hỗ trợ & Liên hệ</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <i className="text-white fas fa-phone mr-2"></i> +84 445 87 999
-                000
+                <i className="text-white fas fa-phone mr-2"></i> 0372 572 892
               </li>
               <li>
                 <i className="text-white fas fa-clock mr-2"></i> Thứ 2 - Thứ 6,
@@ -142,7 +141,7 @@ const Footer = () => {
               </li>
               <li>
                 <i className="text-white fas fa-envelope mr-2"></i>{" "}
-                b.world@store.com
+                bookworld.store123@gmail.com
               </li>
             </ul>
           </div>

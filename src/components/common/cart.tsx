@@ -11,6 +11,13 @@ interface CartItem {
   variant_id?: any;
   quantity: number;
 }
+const getAvailableStock = (item: CartItem) => {
+  return item.variant_id?.quantity ?? item.product_id?.quantity ?? 0;
+};
+
+const isOutOfStock = (item: CartItem) => {
+  return getAvailableStock(item) <= 0;
+};
 
 function Cart() {
   const { isAuthenticated } = useAuth();
@@ -155,7 +162,24 @@ function Cart() {
       const res = await axios.get(`${API_BASE_URL}/cart`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      setCartItems(res.data.data?.items || []);
+       const items = res.data.data?.items || [];
+
+      const normalized = items.map((item: CartItem) => {
+        const stock =
+          item.variant_id?.quantity ?? item.product_id?.quantity ?? 0;
+
+        if (stock <= 0) {
+          return { ...item, quantity: 0 };
+        }
+
+        if (item.quantity > stock) {
+          return { ...item, quantity: stock };
+        }
+
+        return item;
+      });
+
+    setCartItems(normalized);
     } catch (err) {
       console.error("Lỗi lấy giỏ hàng:", err);
     }
@@ -282,7 +306,8 @@ function Cart() {
       0
     );
 
-  const handleCheckout = () => {
+  const handleCheckout = async  () => {
+    await fetchCart();
     if (selectedItems.length === 0) {
       alert("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán");
       return;
@@ -396,7 +421,7 @@ function Cart() {
                 {cartItems.map((item) => {
                   const product = item.product_id;
                   const variant = item.variant_id;
-
+                  const disabled = isOutOfStock(item);
                   // Kiểm tra product có tồn tại trước khi render
                   if (!product) return null;
 
@@ -409,7 +434,8 @@ function Cart() {
                       <td className="p-3 text-center">
                         <input
                           type="checkbox"
-                          checked={selectedItems.includes(key)}
+                           disabled={disabled}
+                          checked={!disabled && selectedItems.includes(key)}
                           onChange={() => toggleSelect(key)}
                           className="w-5 h-5 accent-purple-600"
                         />
@@ -425,6 +451,11 @@ function Cart() {
 
                       <td className="p-3 text-left font-semibold">
                         <span>{product.name}</span>
+                        {isOutOfStock(item) && (
+                          <p className="text-red-500 text-sm mt-1 font-semibold">
+                            Sản phẩm đã hết hàng
+                          </p>
+                        )}
                       </td>
 
                       <td>
@@ -476,7 +507,7 @@ function Cart() {
                                 variant?._id || null
                               )
                             }
-                            disabled={item.quantity <= 1}
+                            disabled={item.quantity <= 1 || disabled}
                             className={`w-8 h-8 rounded-full flex items-center justify-center ${
                               item.quantity <= 1
                                 ? "bg-gray-300 cursor-not-allowed"
@@ -497,7 +528,7 @@ function Cart() {
                                 variant?._id || null
                               )
                             }
-                            disabled={item.quantity >= maxQty}
+                            disabled={item.quantity >= maxQty || disabled}
                             className={`w-8 h-8 rounded-full flex items-center justify-center ${
                               item.quantity >= maxQty
                                 ? "bg-gray-300 cursor-not-allowed"
