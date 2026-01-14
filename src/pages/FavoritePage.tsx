@@ -67,7 +67,35 @@ const FavoritesPage: React.FC = () => {
         },
       });
 
-      setFavorites(response.data);
+      // Fetch category details for each product if needed
+      const favoritesData = response.data;
+      const favoritesWithCategory = await Promise.all(
+        favoritesData.map(async (item: FavoriteItem) => {
+          if (
+            item.product &&
+            item.product.category &&
+            typeof item.product.category === "string"
+          ) {
+            try {
+              const catRes = await axios.get(
+                `${API_BASE_URL}/categories/${item.product.category}`
+              );
+              return {
+                ...item,
+                product: {
+                  ...item.product,
+                  category: catRes.data.data || catRes.data,
+                },
+              };
+            } catch {
+              return item;
+            }
+          }
+          return item;
+        })
+      );
+
+      setFavorites(favoritesWithCategory);
     } catch (error: any) {
       console.error("Lỗi khi tải danh sách yêu thích:", error.response?.data);
       showNotification("Không thể tải danh sách yêu thích", "error");
@@ -261,6 +289,7 @@ const FavoritesPage: React.FC = () => {
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />
+                        {/* Category Badge */}
                         {product.category && (
                           <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
                             {product.category.name}
